@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android" >
+    <PreferenceCategory android:title="Server information" >
+        <EditTextPreference
+            android:key="ip"
+            android:summary="Enter an IP address"
+            android:title="IP address"
+            android:inputType="number"
+            android:digits="0123456789."
+            android:defaultValue="10.0.2.2"
+            android:maxLength="15"/>
+        <EditTextPreference
+            android:key="port"
+            android:summary="Enter a port number"
+            android:title="Port number"
+            android:inputType="number"
+            android:digits="0123456789"
+            android:defaultValue="8888"
+            android:maxLength="5"/>
+    </PreferenceCategory>
+
+    <PreferenceCategory android:title="Analysis option" >
+        <CheckBoxPreference
+            android:title="Send APKs"
+            android:defaultValue="true"
+            android:summary="By choosing this option, the APK of the application selected for analysis from your device will be sent to the server, instead of going through apkpure.com, where all applications and versions are not always available. Only possible by Wi-Fi !"
+            android:key="checkboxPref" />
+    </PreferenceCategory>
+</PreferenceScreen>

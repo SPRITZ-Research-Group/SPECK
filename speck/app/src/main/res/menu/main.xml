@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:myapp="http://schemas.android.com/apk/res-auto">
+
+    <item android:id="@+id/action_search"
+        android:title="Search"
+        android:orderInCategory="100"
+        android:icon="@drawable/ic_search"
+        myapp:showAsAction="ifRoom"
+        myapp:actionViewClass="androidx.appcompat.widget.SearchView" />
+
+    <item android:id="@+id/action_sort"
+        android:title="Sort"
+        android:checkableBehavior="single"
+        android:icon="@drawable/ic_sort"
+        android:orderInCategory="100"
+        app:showAsAction="ifRoom|withText">
+        <menu>
+
+            <group android:id="@+id/group"
+                android:checkableBehavior="single">
+                <item
+                    android:id="@+id/sort_app_all"
+                    android:title="All apps"
+                    android:checked="true"/>
+
+                <item
+                    android:id="@+id/sort_app_analysed"
+                    android:title="Apps analysed"/>
+
+                <item
+                    android:id="@+id/sort_app_not_analysed"
+                    android:title="Apps not analysed"/>
+
+                <item
+                    android:id="@+id/sort_app_analysing"
+                    android:title="Analyses in progress"/>
+
+            </group>
+        </menu>
+    </item>
+
+    <item
+        android:id="@+id/action_refresh"
+        android:title="Reload" />
+
+    <item
+        android:id="@+id/action_howto"
+        android:title="Info" />
+
+    <item android:id="@+id/action_reset"
+        android:title="Reset"
+        android:checkableBehavior="single"
+        android:icon="@drawable/ic_reset"
+        android:orderInCategory="100"
+        app:showAsAction="ifRoom|withText"/>
+
+</menu>

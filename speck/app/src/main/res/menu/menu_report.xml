@@ -1,0 +1,42 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context="com.speck.android.ReportActivity">
+
+    <item
+        android:id="@+id/action_reload"
+        android:orderInCategory="100"
+        android:title="Repeat the analysis"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_remove"
+        android:orderInCategory="100"
+        android:title="Remove the analysis"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_info"
+        android:orderInCategory="100"
+        android:title="Built-in app info"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_export"
+        android:orderInCategory="100"
+        android:title="Export APK"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_google"
+        android:orderInCategory="100"
+        android:title="Show in Google Play"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_display_xml"
+        android:orderInCategory="100"
+        android:title="View AndroidManifest.xml"
+        app:showAsAction="never" />
+
+</menu>

@@ -1,0 +1,5 @@
+<android.content.Intent: void <init>(java.lang.String)> -> _SOURCE_
+<android.content.Intent: void <init>()> -> _SOURCE_
+
+<android.content.Intent: android.content.Intent setData(android.net.Uri)> -> _SINK_
+<android.content.Intent: android.content.Intent addFlags(int)> -> _SINK_

@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">SPECK</string>
+    <string name="navigation_drawer_open">Open navigation drawer</string>
+    <string name="navigation_drawer_close">Close navigation drawer</string>
+    <string name="nav_header_title">SPECK</string>
+    <string name="nav_header_subtitle"></string>
+    <string name="nav_header_desc">Navigation header</string>
+    <string name="action_refresh">Refresh</string>
+    <string name="app_version">v2.0</string>
+    <string name="src_code">Source code available on <a href="https://bitbucket.org/elosiouk/android_s_p_guidelines/src/master/">BitBucket</a></string>
+</resources>
