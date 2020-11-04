@@ -80,7 +80,9 @@ The app's default settings are:
 
 These default behaviours can be changed in the app from the *settings*.
 
+# Video Demo
 
+For a quick overview, you can find two short videos under: SPECK/demo/
 
 ## Rules Documentation
 
