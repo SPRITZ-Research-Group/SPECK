@@ -82,7 +82,7 @@ These default behaviours can be changed in the app from the *settings*.
 
 # Video Demo
 
-For a quick overview, you can find two short videos under: SPECK/demo/
+For a quick overview, you can find two short videos under https://github.com/SPRITZ-Research-Group/SPECK/blob/main/demo/SPECK_Developer_Mode.mp4 and https://github.com/SPRITZ-Research-Group/SPECK/blob/main/demo/SPECK_User_Mode.mp4
 
 ## Rules Documentation
 
