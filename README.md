@@ -45,15 +45,19 @@ where:
 	* *rawoutput*: it contains the raw output from the analysis. This is for precision (true/false positive) plots.
 	* *rulestats*: it contains the time spent for each run and for each APK. This is used for performances evaluation.
 
-![Developer mode demo](./demo/developermode.gif)
+#### Demo
+A quick overview of the developer mode can be found in this short [video](https://github.com/SPRITZ-Research-Group/SPECK/blob/main/demo/SPECK_Developer_Mode.mp4):
 
+![Developer mode demo](./demo/developermode.gif)
 
 ### *user_mode*
 
 The user mode consists of two parts: the server and the app. The *server* receives the analysis requests by the *app*. It analyses the requested application and then sends back to the app its report. The user can choose if sending directly the APK from the device to the server, or let the server to download the APK from [apkpure.com](https://apkpure.com/). 
 
-![User mode demo](./demo/usermode.gif)
+#### Demo
+A quick overview of the user mode can be found in this short [video](https://github.com/SPRITZ-Research-Group/SPECK/blob/main/demo/SPECK_User_Mode.mp4):
 
+![User mode demo](./demo/usermode.gif)
 
 #### Run Server
 To start the server, go to the `server/` directory and run:
@@ -83,9 +87,9 @@ The app's default settings are:
 
 These default behaviours can be changed in the app from the *settings*.
 
-# Video Demo
+<!-- # Video Demo
 
-For a quick overview, you can find two short videos under https://github.com/SPRITZ-Research-Group/SPECK/blob/main/demo/SPECK_Developer_Mode.mp4 and https://github.com/SPRITZ-Research-Group/SPECK/blob/main/demo/SPECK_User_Mode.mp4
+For a quick overview, you can find two short videos under https://github.com/SPRITZ-Research-Group/SPECK/blob/main/demo/SPECK_Developer_Mode.mp4 and https://github.com/SPRITZ-Research-Group/SPECK/blob/main/demo/SPECK_User_Mode.mp4 -->
 
 ## Rules Documentation
 
