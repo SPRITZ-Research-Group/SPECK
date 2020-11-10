@@ -45,12 +45,15 @@ where:
 	* *rawoutput*: it contains the raw output from the analysis. This is for precision (true/false positive) plots.
 	* *rulestats*: it contains the time spent for each run and for each APK. This is used for performances evaluation.
 
-
+![Developer mode demo](./demo/developermode.gif)
 
 
 ### *user_mode*
 
 The user mode consists of two parts: the server and the app. The *server* receives the analysis requests by the *app*. It analyses the requested application and then sends back to the app its report. The user can choose if sending directly the APK from the device to the server, or let the server to download the APK from [apkpure.com](https://apkpure.com/). 
+
+![User mode demo](./demo/usermode.gif)
+
 
 #### Run Server
 To start the server, go to the `server/` directory and run:
