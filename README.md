@@ -54,11 +54,6 @@ A quick overview of the developer mode can be found in this short [video](https:
 
 The user mode consists of two parts: the server and the app. The *server* receives the analysis requests by the *app*. It analyses the requested application and then sends back to the app its report. The user can choose if sending directly the APK from the device to the server, or let the server to download the APK from [apkpure.com](https://apkpure.com/). 
 
-#### Demo
-A quick overview of the user mode can be found in this short [video](https://github.com/SPRITZ-Research-Group/SPECK/blob/main/demo/SPECK_User_Mode.mp4):
-
-![User mode demo](./demo/usermode.gif)
-
 #### Run Server
 To start the server, go to the `server/` directory and run:
 
@@ -90,6 +85,11 @@ These default behaviours can be changed in the app from the *settings*.
 <!-- # Video Demo
 
 For a quick overview, you can find two short videos under https://github.com/SPRITZ-Research-Group/SPECK/blob/main/demo/SPECK_Developer_Mode.mp4 and https://github.com/SPRITZ-Research-Group/SPECK/blob/main/demo/SPECK_User_Mode.mp4 -->
+
+#### Demo
+A quick overview of the user mode can be found in this short [video](https://github.com/SPRITZ-Research-Group/SPECK/blob/main/demo/SPECK_User_Mode.mp4):
+
+![User mode demo](./demo/usermode.gif)
 
 ## Rules Documentation
 
