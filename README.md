@@ -8,6 +8,16 @@ Three levels of severity in terms of security are distinguished:
 * *WARNING*	: a security issue presumed, for information
 * *CRITICAL*	: a security issue confirmed
 
+#### Demo First!
+
+A quick overview of the developer mode can be found in this short [video](https://github.com/SPRITZ-Research-Group/SPECK/blob/main/demo/SPECK_Developer_Mode.mp4):
+
+![Developer mode demo](./demo/developermode.gif)
+
+A quick overview of the user mode can be found in this short [video](https://github.com/SPRITZ-Research-Group/SPECK/blob/main/demo/SPECK_User_Mode.mp4):
+
+![User mode demo](./demo/usermode.gif)
+
 
 
 ## Configuration
@@ -19,8 +29,6 @@ sed -i -e 's/\r$//' ./server/apk2src/jadx/gradlew
 sed -i -e 's/\r$//' ./server/apk2src/decompiler.sh
 ./server/apk2src/jadx/gradlew dist -p ./server/apk2src/jadx/
 ```
-
-
 
 ## Usage
 
@@ -44,11 +52,6 @@ where:
 * `-D` : specify the name of a *MongoDB* database where to store the analysis results; data is stored in the following two collections:
 	* *rawoutput*: it contains the raw output from the analysis. This is for precision (true/false positive) plots.
 	* *rulestats*: it contains the time spent for each run and for each APK. This is used for performances evaluation.
-
-#### Demo
-A quick overview of the developer mode can be found in this short [video](https://github.com/SPRITZ-Research-Group/SPECK/blob/main/demo/SPECK_Developer_Mode.mp4):
-
-![Developer mode demo](./demo/developermode.gif)
 
 ### *user_mode*
 
@@ -81,15 +84,6 @@ The app's default settings are:
 * The APK is sent directly from the device to the server. 
 
 These default behaviours can be changed in the app from the *settings*.
-
-<!-- # Video Demo
-
-For a quick overview, you can find two short videos under https://github.com/SPRITZ-Research-Group/SPECK/blob/main/demo/SPECK_Developer_Mode.mp4 and https://github.com/SPRITZ-Research-Group/SPECK/blob/main/demo/SPECK_User_Mode.mp4 -->
-
-#### Demo
-A quick overview of the user mode can be found in this short [video](https://github.com/SPRITZ-Research-Group/SPECK/blob/main/demo/SPECK_User_Mode.mp4):
-
-![User mode demo](./demo/usermode.gif)
 
 ## Rules Documentation
 
