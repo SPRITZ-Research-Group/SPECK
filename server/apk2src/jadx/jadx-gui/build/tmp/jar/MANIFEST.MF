@@ -1,0 +1,15 @@
+Manifest-Version: 1.0
+jadx-version: dev
+Main-Class: jadx.gui.JadxGUI
+Class-Path: jfontchooser-1.0.5.jar jadx-cli-dev.jar jadx-core-dev.jar dx
+ -1.16.jar android-29-clst.jar android-29-res.jar logback-classic-1.2.3.
+ jar slf4j-api-1.7.30.jar rsyntaxtextarea-3.0.8.jar image-viewer-1.2.3.j
+ ar commons-text-1.8.jar commons-lang3-3.9.jar rxjava2-swing-0.3.7.jar r
+ xjava-2.2.17.jar apksig-3.5.3.jar asm-7.3.1.jar annotations-18.0.0.jar 
+ gson-2.8.6.jar baksmali-2.4.0.jar smali-2.4.0.jar util-2.4.0.jar dexlib
+ 2-2.4.0.jar guava-28.2-jre.jar jcommander-1.78.jar reactive-streams-1.0
+ .3.jar antlr-runtime-3.5.2.jar stringtemplate-3.2.1.jar failureaccess-1
+ .0.1.jar listenablefuture-9999.0-empty-to-avoid-conflict-with-guava.jar
+  jsr305-3.0.2.jar checker-qual-2.10.0.jar error_prone_annotations-2.3.4
+ .jar j2objc-annotations-1.3.jar logback-core-1.2.3.jar antlr-2.7.7.jar
+

@@ -1,3 +1,0 @@
-<android.content.Context: android.content.ContentResolver getContentResolver()> -> _SOURCE_
-
-<android.content.ContentResolver: void takePersistableUriPermission(android.net.Uri,int)> -> _SINK_

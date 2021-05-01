@@ -16,7 +16,7 @@
 
 % to detect 
 % Intent intent2 = new Intent();
-% intent2 = setAction(String);
+% intent2.setAction(String);
 % Intent.createChooser(intent2, "title");
 <android.content.Intent: android.content.Intent setAction(java.lang.String)> -> _SOURCE_
 <android.content.Intent: android.content.Intent createChooser(android.content.Intent,java.lang.CharSequence)> -> _SINK_

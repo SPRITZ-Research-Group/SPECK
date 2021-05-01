@@ -1,129 +1,165 @@
 #!/usr/bin/python3
 
-from Rules import *
-from FileReader import *
-from XmlReader import *
-from Parser import *
-from R import *
 import sys
 
+from FileReader import *
+from Parser import *
+from R import *
+from XmlReader import *
 
-'''
+from Rules import *
+
+"""
 RULE N°14
 
 + Check validity of data
 ** make sure that the contents of the data haven't been corrupted or modified
 -> https://developer.android.com/topic/security/best-practices#external-storage
-
-? Pseudo Code:
-	1. Look for 'READ_EXTERNAL_STORAGE' permission in manifest file
-	2. Look for a 'FileInputStream' variable
-	3. Check if a function with keywords 'check' & 'validity' exists
-
-! Output
-	-> NOTHING	: no READ_EXTERNAL_STORAGE permission found
-	-> WARNING	: no keywords 'check' & 'validity' found
-	-> OK		: keywords 'check' & 'validity' found
-'''
+"""
 
 
 class Rule14(Rules):
-	def __init__(self, directory, database, verbose=True, verboseDeveloper=False, storeManager=None, flowdroid=False, platform="",validation=False, quiet=True):
-		Rules.__init__(self, directory, database, verbose, verboseDeveloper, storeManager, flowdroid, platform, validation, quiet)
+    def __init__(
+        self,
+        directory,
+        database,
+        verbose=True,
+        verboseDeveloper=False,
+        storeManager=None,
+        flowdroid=False,
+        platform="",
+        validation=False,
+        quiet=True,
+    ):
+        Rules.__init__(
+            self,
+            directory,
+            database,
+            verbose,
+            verboseDeveloper,
+            storeManager,
+            flowdroid,
+            platform,
+            validation,
+            quiet,
+        )
 
-		self.AndroidErrMsg = "reading on external storage might not be checked"
-		self.AndroidOkMsg = "reading on external storage (are) checked"
-		self.AndroidText = "https://developer.android.com/topic/security/best-practices#external-storage"
+        self.AndroidErrMsg = "reading on external storage might not be checked"
+        self.AndroidOkMsg = "reading on external storage (are) checked"
+        self.AndroidText = "https://developer.android.com/topic/security/best-practices#external-storage"
 
-		self.okMsg = "Data is checked when reading on external storage"
-		self.errMsg = "Don't forget to double check the integrity of the data acquired from the external storage"
-		self.category = R.CAT_4
-		
-		self.findXml()
-		self.show(14, "Check validity of data")
+        self.okMsg = "Data is checked when reading on external storage"
+        self.errMsg = "Don't forget to double check the integrity of the data acquired from the external storage"
+        self.category = R.CAT_4
 
-	def checkReadOnExternalStorage(self, xmlReader, permissions):
-		for p in permissions:
-			for arg in p[XmlReader.ARGS]:
-				if 'android:name=' in arg:
-					value = xmlReader.getArgValue(arg)
-					if "READ_EXTERNAL_STORAGE" in value:
-						return True
-		return False
+        self.findXml()
+        self.show(14, "Check validity of data")
 
-	def checkValidity(self, inStream, validator):
-		In = []
-		NotIn = []
+    def checkReadOnExternalStorage(self, xmlReader, permissions):
+        for p in permissions:
+            for arg in p[XmlReader.ARGS]:
+                if "android:name=" in arg:
+                    value = xmlReader.getArgValue(arg)
+                    if "READ_EXTERNAL_STORAGE" in value:
+                        return True
+        return False
 
-		inStream = Parser.setScopes(inStream)
-		for elem in inStream:
-			isIn = False
+    def checkInScope(self, inStream, validator):
+        In = []
+        NotIn = []
 
-			for v in validator:
-				if ((elem[R.SCOPE] == R.VARGLOBAL) or 
-					(elem[R.SCOPE] == R.VARCLASS and elem[R.CLASSID] == v[R.CLASSID]) or
-					(elem[R.SCOPE] == R.VARLOCAL and elem[R.CLASSID] == v[R.CLASSID] and elem[R.FUNCID] == v[R.FUNCID])):
+        inStream = Parser.setScopes(inStream)
+        for elem in inStream:
+            isIn = False
 
-					isIn = True
+            for v in validator:
+                if (
+                    (elem[R.SCOPE] == R.VARGLOBAL)
+                    or (elem[R.SCOPE] == R.VARCLASS and elem[R.CLASSID] == v[R.CLASSID])
+                    or (
+                        elem[R.SCOPE] == R.VARLOCAL
+                        and elem[R.CLASSID] == v[R.CLASSID]
+                        and elem[R.FUNCID] == v[R.FUNCID]
+                    )
+                ):
 
-			if isIn == False:
-				NotIn.append(elem)
-			else:
-				In.append(elem)
+                    isIn = True
 
-		return In, NotIn
+            if isIn == False:
+                NotIn.append(elem)
+            else:
+                In.append(elem)
 
+        return In, NotIn
 
-	def run(self):
-		self.loading()
+    def run(self):
+        self.loading()
 
-		if self.manifest != None:
-			xmlReader = XmlReader(self.manifest)
+        if self.manifest != None:
+            xmlReader = XmlReader(self.manifest)
 
-			# Check if READ_EXTERNAL_STORAGE is in manifest file
-			permissions = xmlReader.getArgsTag("uses-permission")
-			readOnExternalStorage = self.checkReadOnExternalStorage(xmlReader, permissions)
+            # Check if READ_EXTERNAL_STORAGE is in manifest file
+            permissions = xmlReader.getArgsTag("uses-permission")
+            readOnExternalStorage = self.checkReadOnExternalStorage(
+                xmlReader, permissions
+            )
 
-			if readOnExternalStorage:
-				filt = Filter(self.directory, ['android.content.Context', 'android.content.*', 'android.*', 'android', 'android.content'])
-				javaFiles = filt.execute()
+            if readOnExternalStorage:
+                filt = Filter(self.directory, ["android.os.Environment"])
+                javaFiles = filt.execute()
 
-				if len(javaFiles) > 0:
-					self.maxFiles = len(javaFiles)
-				else:
-					self.loading()
-					self.updateN()
+                if len(javaFiles) > 0:
+                    self.maxFiles = len(javaFiles)
+                else:
+                    self.loading()
+                    self.updateN()
 
-				for f in javaFiles:
-					fileReader = FileReader(f)
+                for f in javaFiles:
+                    fileReader = FileReader(f)
 
-					found = Parser.finder(fileReader,
-									[[Parser.findLine, ([['getExternalFilesDir(']], None)],
-									 [Parser.findLine, ([['heck', 'alidity']], None)]])
+                    found = Parser.finder(
+                        fileReader,
+                        [
+                            [Parser.findLine, ([["getExternalFilesDir("]], None)],
+                            [
+                                Parser.findLine,
+                                ([["getExternalStorageDirectory("]], None),
+                            ],
+                            [
+                                Parser.findLine,
+                                ([["getExternalStoragePublicDirectory("]], None),
+                            ],
+                            [Parser.findLine, ([["getExternalCacheDir("]], None)],
+                            [Parser.findLine, ([["getExternalCacheDirs("]], None)],
+                            [Parser.findLine, ([["getExternalFilesDir("]], None)],
+                            [Parser.findLine, ([["getExternalFilesDirs("]], None)],
+                            [Parser.findLine, ([["getExternalMediaDirs("]], None)],
+                            [Parser.findLine, ([["new FileInputStream("]], None)],
+                        ],
+                    )
 
-					inStream = found[0]
-					validator = found[1]
+                    # Get all the lines where the external storage is required, then check for FileInputStream variables in that scope
+                    inStream = found[0] + found[1]
+                    validator = found[2]
 
-					# Check if each FileInputStream have a function which check validity of data in its scope
-					In, NotIn = self.checkValidity(inStream, validator)
+                    # Check if each FileInputStream have a function which check validity of data in its scope
+                    In, NotIn = self.checkInScope(inStream, validator)
 
-					# Set log msg
-					In 		= Parser.setMsg(In, R.OK)
-					NotIn 	= Parser.setMsg(NotIn, R.WARNING, self.errMsg)
+                    # Set log msg
+                    In = Parser.setMsg(In, R.OK)
+                    NotIn = Parser.setMsg(NotIn, R.WARNING, self.errMsg)
 
-					self.updateOWN(f, In, NotIn, (len(NotIn) == 0 and len(In) == 0))
-					self.loading()
-					fileReader.close()
+                    self.updateOWN(f, In, NotIn, (len(NotIn) == 0 and len(In) == 0))
+                    self.loading()
+                    fileReader.close()
 
-			else:
-				self.loading()
-				self.updateN()
+            else:
+                self.loading()
+                self.updateN()
 
-			xmlReader.close()
+            xmlReader.close()
 
-
-		self.store(14, self.AndroidOkMsg, self.AndroidErrMsg, self.AndroidText, self.category)
-		self.display(FileReader)
-
-
-
+        self.store(
+            14, self.AndroidOkMsg, self.AndroidErrMsg, self.AndroidText, self.category
+        )
+        self.display(FileReader)

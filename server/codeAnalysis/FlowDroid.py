@@ -46,6 +46,7 @@ class FlowDroid():
 					None, None, FlowDroidRule27, FlowDroidRule28, None, None, None, FlowDroidRule32, None, None, FlowDroidRule35]
 
 		if os.path.isfile(self.srcNsink) and os.path.isfile(apk):
+		# if os.path.isfile(self.srcNsink):
 			if self.verbose:
 				print("\033[36m[?] FlowDroid is running...\033[0m")
 			self.getSrcNSink()

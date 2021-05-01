@@ -1,0 +1,5 @@
+% to detect
+% FileInputStream stream = new FileInputStream(file);
+% DigestInputStream digest = new DigestInputStream(stream, digest);
+<java.io.FileInputStream: void <init>(java.io.File)> -> _SOURCE_
+<java.security.DigestInputStream: void <init>(java.io.InputStrem,java.security.MessageDigest)> -> _SINK_ 
