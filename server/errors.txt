@@ -1,2 +1,0 @@
-extraction failed: com.instagram.apk
-extraction failed: com.instagram.androd.apk
