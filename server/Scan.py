@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import os, sys, subprocess, glob, argparse, time
+os.chdir(os.path.dirname(__file__))
 sys.path.insert(0, 'codeAnalysis/')
 sys.path.insert(0, 'codeAnalysis/Rules/')
 
