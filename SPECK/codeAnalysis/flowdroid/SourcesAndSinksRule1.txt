@@ -1,0 +1,22 @@
+% to detect 
+% Intent i = new Intent(String);
+<android.content.Intent: void <init>(java.lang.String)> -> _SOURCE_
+<android.content.Intent: void <init>(java.lang.String)> -> _SINK_
+
+% to detect
+% Intent i = new Intent(); 
+% i.setAction(String);
+<android.content.Intent: void <init>()> -> _SOURCE_
+<android.content.Intent: android.content.Intent setAction(java.lang.String)> -> _SINK_
+
+% to detect 
+% Intent intent2 = new Intent(Intent.ACTION_SEND); 
+% Intent.createChooser(intent2, "title");
+<android.content.Intent: void <init>(java.lang.String)> -> _SOURCE_
+
+% to detect 
+% Intent intent2 = new Intent();
+% intent2.setAction(String);
+% Intent.createChooser(intent2, "title");
+<android.content.Intent: android.content.Intent setAction(java.lang.String)> -> _SOURCE_
+<android.content.Intent: android.content.Intent createChooser(android.content.Intent,java.lang.CharSequence)> -> _SINK_

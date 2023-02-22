@@ -1,0 +1,2 @@
+<android.app.Activity: android.view.View findViewById(int)> -> _SOURCE_
+<android.webkit.WebView: void clearCache(boolean)> -> _SINK_

@@ -1,0 +1,9 @@
+% implicit intent
+<android.content.Intent: void <init>(java.lang.String)> -> _SOURCE_
+<android.content.Intent: void <init>()> -> _SOURCE_
+
+% sinks
+<android.content.Context: boolean bindService(android.content.Intent,android.content.ServiceConnection,int)> -> _SINK_
+<android.content.Context: android.content.ComponentName startService(android.content.Intent)> -> _SINK_
+<android.content.Context: void sendOrderedBroadcast(android.content.Intent,java.lang.String)> -> _SINK_
+<android.content.Context: void startActivity(android.content.Intent)> -> _SINK_

@@ -1,0 +1,12 @@
+<javax.net.SocketFactory: java.net.Socket createSocket(java.lang.String,int)> -> _SOURCE_
+<javax.net.SocketFactory: java.net.Socket createSocket(java.net.InetAddress,int)> -> _SOURCE_
+<javax.net.SocketFactory: java.net.Socket createSocket(java.net.InetAddress,int,java.net.InetAddress,int)> -> _SOURCE_
+<javax.net.SocketFactory: java.net.Socket createSocket(java.lang.String,int,java.net.InetAddress,int)> -> _SOURCE_
+<javax.net.SocketFactory: java.net.Socket createSocket()> -> _SOURCE_
+
+<javax.net.ssl.SSLSocket: javax.net.ssl.SSLSession getSession()> -> _SINK_
+
+
+<javax.net.ssl.SSLSocket: javax.net.ssl.SSLSession getSession()> -> _SOURCE_
+
+<javax.net.ssl.HostnameVerifier: boolean verify(java.lang.String,javax.net.ssl.SSLSession)> -> _SINK_
