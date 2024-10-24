@@ -58,41 +58,40 @@ The formalised rules enforced in SPECK are the followings:
 - Rule10    : Use scoped directory access
 - Rule11    : Store only non-sensitive data in cache files
 - Rule12    : Use SharedPreferences in private mode
-- Rule13    : Keep services and dependencies up-to-date
-- Rule14    : Check validity of data
+- Rule13    : Check validity of data
 
 **PART 2: https://developer.android.com/training/articles/security-tips**
 
-- Rule15    : Avoid custom dangerous permission
-- Rule16    : Erase data in webview cache
-- Rule17    : Avoid SQL injections
-- Rule18    : Prefer explicit intents
-- Rule19    : Use IP Networking
-- Rule20	  : Use services
-- Rule21    : Use telephony networking
-- Rule22    : Use cryptography
-- Rule23    : Use broadcast receivers
-- Rule24    : Dynamically load code
+- Rule14    : Avoid custom dangerous permission
+- Rule15    : Erase data in webview cache
+- Rule16    : Avoid SQL injections
+- Rule17    : Prefer explicit intents
+- Rule18    : Use IP Networking
+- Rule19	  : Use services
+- Rule20    : Use telephony networking
+- Rule21    : Use cryptography
+- Rule22    : Use broadcast receivers
+- Rule23    : Dynamically load code
 
 **PART 3: https://developer.android.com/training/articles/security-ssl**
 
-- Rule25    : Hostname verification
-- Rule26    : SSLSocket
+- Rule24    : Hostname verification
+- Rule25    : SSLSocket
 
 **PART 4: https://developer.android.com/training/articles/security-config**
 
-- Rule27    : Configure CAs for debugging
-- Rule28    : Opt out of cleartext traffic
+- Rule26    : Configure CAs for debugging
+- Rule27    : Opt out of cleartext traffic
 
 **PART 5: https://developer.android.com/guide/topics/security/cryptography**
 
-- Rule29    : Choose a recommended algorithm
-- Rule30    : Deprecated cryptographic functionality
+- Rule28    : Choose a recommended algorithm
+- Rule29    : Deprecated cryptographic functionality
 
 **PART 6: https://developer.android.com/training/articles/direct-boot**
 
-- Rule31    : Migrate existing data
-- Rule32    : Access device encrypted storage
+- Rule30    : Migrate existing data
+- Rule31    : Access device encrypted storage
 
 ## Intentionally Vulnerable App (IVA)
 
