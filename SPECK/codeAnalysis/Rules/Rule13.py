@@ -1,97 +1,215 @@
 #!/usr/bin/python3
 
-from Rules import *
+import sys
+
 from FileReader import *
 from Parser import *
 from R import *
-import sys
+from XmlReader import *
 
+from Rules import *
 
-'''
-RULE N°13
+"""
+RULE N°14
 
-+ Keep services and dependencies up-to-date
-** Make sure that all libraries, SDKs, Google Play services, and other dependencies are up to date
--> https://developer.android.com/topic/security/best-practices#services-dependencies-updated
--> https://developer.android.com/training/articles/security-gms-provider
++ Check validity of data
+** make sure that the contents of the data haven't been corrupted or modified
+-> https://developer.android.com/topic/security/best-practices#external-storage
+"""
 
-? Pseudo Code:
-	1. Check if the app use Google Play services
-	2. Check the Google Play services security provider
-
-! Output
-	-> NOTHING	: no google play services found
-	-> OK 	   	: google play services are kept up-to-date
-	-> CRITICAL	: google play services are not kept up-to-date
-'''
 
 class Rule13(Rules):
-	def __init__(self, directory, database, verbose=True, verboseDeveloper=False, storeManager=None, flowdroid=False, platform="",validation=False, quiet=True):
-		Rules.__init__(self, directory, database, verbose, verboseDeveloper, storeManager, flowdroid, platform, validation, quiet)
+    def __init__(
+        self,
+        directory,
+        database,
+        verbose=True,
+        verboseDeveloper=False,
+        storeManager=None,
+        flowdroid=False,
+        platform="",
+        validation=False,
+        quiet=True,
+    ):
+        Rules.__init__(
+            self,
+            directory,
+            database,
+            verbose,
+            verboseDeveloper,
+            storeManager,
+            flowdroid,
+            platform,
+            validation,
+            quiet,
+        )
 
-		self.AndroidErrMsg = "Google Play Services is not keep up-to-date"
-		self.AndroidOkMsg = "Google Play Services is keep up-to-date"
-		self.AndroidText = "https://developer.android.com/topic/security/best-practices#services-dependencies-updated"
+        self.AndroidErrMsg = "reading on external storage might not be checked"
+        self.AndroidOkMsg = "reading on external storage (are) checked"
+        self.AndroidText = "https://developer.android.com/topic/security/best-practices#external-storage"
 
-		self.okMsg = "Google Play services is up-to-date"
-		self.errMsg = "There is no check to know if Google Play services is up-to-date"
-		self.category = R.CAT_NA
-		
-		self.filter('', True)
-		self.show(13, "Keep services and dependencies up-to-date")
+        self.okMsg = "Data is checked when reading on external storage"
+        self.errMsg = "Don't forget to double check the integrity of the data acquired from the external storage"
+        self.category = R.CAT_4
 
-	def run(self):
-		self.loading()
-		
-		# Check if Google Play Services is used
-		if os.path.isdir(self.directory + '/sources/com/google/android/gms'):
+        self.findXml()
+        self.show(14, "Check validity of data")
 
-			for f in self.javaFiles:
-				fileReader = FileReader(f)
+    def checkReadOnExternalStorage(self, xmlReader, permissions):
+        for p in permissions:
+            for arg in p[XmlReader.ARGS]:
+                if "android:name=" in arg:
+                    value = xmlReader.getArgValue(arg)
+                    if (
+                        "READ_EXTERNAL_STORAGE" in value
+                        or "WRITE_EXTERNAL_STORAGE" in value
+                    ):
+                        return True
+        return False
 
-				search = Parser.finder(fileReader,
-									[[Parser.findArgName, ('ProviderInstaller.installIfNeededAsync', 0, None)],
-									 [Parser.findArgName, ('ProviderInstaller.installIfNeeded', 0, None)]])
-				search = search[0] + search[1]
-				
-				if len(search) > 0:
-					# Case where it's OK
-					search = Parser.setMsg(search, R.OK)
-					self.updateON(f, search)
+    def checkInScope(self, inStream, validator):
+        In = []
+        NotIn = []
 
-				if len(search) > 0:
-					self.loading(True)
-					break
-				else:
-					self.loading()
+        inStream = Parser.setScopes(inStream)
+        for elem in inStream:
+            isIn = False
 
-				fileReader.close()
+            for v in validator:
+                if (
+                    (elem[R.SCOPE] == R.VARGLOBAL)
+                    or (
+                        elem[R.SCOPE] == R.VARCLASS
+                        and elem[R.CLASSID] == v[R.CLASSID]
+                    )
+                    or (
+                        elem[R.SCOPE] == R.VARLOCAL
+                        and elem[R.CLASSID] == v[R.CLASSID]
+                        and elem[R.FUNCID] == v[R.FUNCID]
+                    )
+                ):
 
-			# Case where there is no call to installIfNeededAsync or installIfNeeded
-			if len(self.results) == 0:
-				elem = {}
-				elem[R.INSTR] = ''
-				search = [elem]
-				search = Parser.setMsg(search, R.CRITICAL, self.errMsg)
-				
-				self.updateC('nothing', search)
-				
-		else:
-			self.updateN()
+                    isIn = True
+            if isIn == False:
+                NotIn.append(elem)
+            else:
+                In.append(elem)
 
-		self.store(13, self.AndroidOkMsg, self.AndroidErrMsg, self.AndroidText, self.category)
-		self.display(FileReader)
+        return In, NotIn
 
+    def run(self):
+        self.loading()
 
+        if self.manifest != None:
+            xmlReader = XmlReader(self.manifest)
 
+            # Check if READ_EXTERNAL_STORAGE is in manifest file
+            permissions = xmlReader.getArgsTag("uses-permission")
+            readOnExternalStorage = self.checkReadOnExternalStorage(
+                xmlReader, permissions
+            )
 
+            if readOnExternalStorage:
+                filt = Filter(
+                    self.directory,
+                    ["android.content.Context", "android.os.Environment"],
+                )
+                javaFiles = filt.execute()
 
-		
+                if len(javaFiles) > 0:
+                    self.maxFiles = len(javaFiles)
+                else:
+                    self.loading()
+                    self.updateN()
 
+                for f in javaFiles:
+                    fileReader = FileReader(f)
 
+                    found = Parser.finder(
+                        fileReader,
+                        [
+                            [
+                                Parser.findLine,
+                                ([["getExternalFilesDir("]], None),
+                            ],
+                            [
+                                Parser.findLine,
+                                ([["getExternalStorageDirectory("]], None),
+                            ],
+                            [
+                                Parser.findLine,
+                                (
+                                    [["getExternalStoragePublicDirectory("]],
+                                    None,
+                                ),
+                            ],
+                            [
+                                Parser.findLine,
+                                ([["getExternalCacheDir("]], None),
+                            ],
+                            [
+                                Parser.findLine,
+                                ([["getExternalCacheDirs("]], None),
+                            ],
+                            [
+                                Parser.findLine,
+                                ([["getExternalFilesDir("]], None),
+                            ],
+                            [
+                                Parser.findLine,
+                                ([["getExternalFilesDirs("]], None),
+                            ],
+                            [
+                                Parser.findLine,
+                                ([["getExternalMediaDirs("]], None),
+                            ],
+                            # validator
+                            [
+                                Parser.findLine,
+                                ([["new FileInputStream("]], None),
+                            ],
+                            [Parser.findLine, ([["openFileInput("]], None)],
+                        ],
+                    )
 
+                    # Get all the lines where the external storage is required, then check for FileInputStream variables in that scope
+                    inStream = (
+                        found[0]
+                        + found[1]
+                        + found[2]
+                        + found[3]
+                        + found[4]
+                        + found[5]
+                        + found[6]
+                        + found[7]
+                    )
+                    validator = found[8] + found[9]
 
+                    # Check if each FileInputStream have a function which check validity of data in its scope
+                    # sime: changed the order, since we check if the file is used as input and not if a validation function is called
+                    NotIn, In = self.checkInScope(inStream, validator)
 
+                    # Set log msg
+                    In = Parser.setMsg(In, R.OK)
+                    NotIn = Parser.setMsg(NotIn, R.WARNING, self.errMsg)
 
+                    self.updateOWN(
+                        f, In, NotIn, (len(NotIn) == 0 and len(In) == 0)
+                    )
+                    self.loading()
+                    fileReader.close()
 
+            else:
+                self.loading()
+                self.updateN()
 
+            xmlReader.close()
+
+        self.store(
+            14,
+            self.AndroidOkMsg,
+            self.AndroidErrMsg,
+            self.AndroidText,
+            self.category,
+        )
+        self.display(FileReader)

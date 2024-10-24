@@ -1,97 +1,92 @@
 #!/usr/bin/python3
 
 from Rules import *
-from XmlReader import *
+from FileReader import *
 from Parser import *
 from R import *
 import sys
 
 
-'''
-RULE N°23
+"""
+RULE N°24
 
-+ Use broadcast receivers
-** Use android:permission attribute in broadcast receiver
--> https://developer.android.com/training/articles/security-tips#BroadcastReceivers
++ Dynamically load code
+** It's discourage to load code from outside of your application APK
+-> https://developer.android.com/training/articles/security-tips#DynamicCode
 
 ? Pseudo Code:
-	1. If there is a receiver, suggest to protect it with android:permission attribute
+	1. If DexClassLoader is used, discourage its use
 
 ! Output
-	-> NOTHING	: no broadcast receiver found
-	-> OK 	   	: a broadcast receiver use android:permission attribute
-	-> WARNING	: a broadcast receiver doesn't use android:permission attribute
-'''
+	-> NOTHING	: no DexClassLoader found
+	-> CRITICAL	: DexClassLoader found
+"""
+
 
 class Rule23(Rules):
-	def __init__(self, directory, database, verbose=True, verboseDeveloper=False, storeManager=None, flowdroid=False, platform="",validation=False, quiet=True):
-		Rules.__init__(self, directory, database, verbose, verboseDeveloper, storeManager, flowdroid, platform, validation, quiet)
+    def __init__(
+        self,
+        directory,
+        database,
+        verbose=True,
+        verboseDeveloper=False,
+        storeManager=None,
+        flowdroid=False,
+        platform="",
+        validation=False,
+        quiet=True,
+    ):
+        Rules.__init__(
+            self,
+            directory,
+            database,
+            verbose,
+            verboseDeveloper,
+            storeManager,
+            flowdroid,
+            platform,
+            validation,
+            quiet,
+        )
 
-		self.AndroidErrMsg = "broadcast receiver(s) (are) not protected with a permission attribute"
-		self.AndroidOkMsg = "broadcast receiver(s) (are) protected with a permission attribute"
-		self.AndroidText = "https://developer.android.com/training/articles/security-tips#BroadcastReceivers"
+        self.AndroidErrMsg = "time(s) dynamic code loading (were) found"
+        self.AndroidOkMsg = "no dynamic code loading was found"
+        self.AndroidText = "https://developer.android.com/training/articles/security-tips#DynamicCode"
 
-		self.okMsg = "Broadcast receiver is well implemented"
-		self.errMsg = "It's better to use android:permission attribute in a broadcast receiver"
-		self.category = R.CAT_1
-		
-		self.findXml()
-		self.show(23, "Use broadcast receivers")
+        self.okMsg = "No dynamic code loading is used"
+        self.errMsg = (
+            "Its discourage to load code from outside of your application APK"
+        )
+        self.category = R.CAT_NA
 
-	def checkReceivers(self, receivers):
-		In = []
-		NotIn = []
+        self.filter("dalvik.system.DexClassLoader")
+        self.show(24, "Dynamically load code")
 
-		for r in receivers:
-			isIn = not self.is_exported(r)
-			for arg in r[XmlReader.ARGS]:
-				if 'android:permission' in arg:
-					isIn = True
-					break
-			if isIn:
-				In.append(r)
-			else:
-				NotIn.append(r)
+    def run(self):
+        self.loading()
 
-		return In, NotIn
-	
-	@staticmethod
-	def is_exported(receiver):
-		for arg in receiver[XmlReader.ARGS]:
-			if 'android:exported="false"' in arg:
-				return False
-			if 'android:exported="true"' in arg:
-				return True
-		if '<intent-filter>' in receiver[XmlReader.INSTR]:
-			return True
-		return False
+        for f in self.javaFiles:
+            fileReader = FileReader(f)
 
-	def run(self):
-		self.loading()
+            # Look for depreciated functions
+            found = Parser.finder(
+                fileReader,
+                [[Parser.findLine, ([["DexClassLoader", "new"]], None)]],
+            )[0]
 
-		if self.manifest != None:
-			xmlReader = XmlReader(self.manifest)
+            # Set log msg
+            found = Parser.setMsg(found, R.CRITICAL, self.errMsg)
 
-			receivers = xmlReader.getArgsTag("receiver")
+            self.updateCN(f, found)
+            self.loading()
+            fileReader.close()
 
-			In, NotIn = self.checkReceivers(receivers)
-			
-
-			# format data to be display in 'Display' class
-			In = xmlReader.constructToken(In)
-			NotIn = xmlReader.constructToken(NotIn)
-
-			# set log message
-			In = Parser.setMsg(In, R.OK)
-			NotIn = Parser.setMsg(NotIn, R.WARNING, self.errMsg)
-
-			self.updateOWN(xmlReader.getFile(), In, NotIn, (len(receivers) == 0))
-
-			xmlReader.close()
-			self.loading()
-
-			self.store(23, self.AndroidOkMsg, self.AndroidErrMsg, self.AndroidText, self.category)
-			self.display(XmlReader)
-
-		else:
-			self.loading()
+        self.store(
+            24,
+            self.AndroidOkMsg,
+            self.AndroidErrMsg,
+            self.AndroidText,
+            self.category,
+            True,
+        )
+        self.display(FileReader)

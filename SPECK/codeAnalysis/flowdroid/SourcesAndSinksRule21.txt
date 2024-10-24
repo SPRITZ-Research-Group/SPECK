@@ -1,0 +1,10 @@
+<javax.crypto.KeyGenerator: javax.crypto.KeyGenerator getInstance(java.lang.String)> -> _SOURCE_
+<javax.crypto.KeyGenerator: javax.crypto.KeyGenerator getInstance(java.lang.String,java.lang.String)> -> _SOURCE_
+<javax.crypto.KeyGenerator: javax.crypto.KeyGenerator getInstance(java.lang.String,java.security.Provider)> -> _SOURCE_
+
+<javax.crypto.KeyGenerator: void init(java.security.spec.AlgorithmParameterSpec,java.security.SecureRandom)> -> _SINK_
+<javax.crypto.KeyGenerator: void init(java.security.SecureRandom)> -> _SINK_
+<javax.crypto.KeyGenerator: void init(int,java.security.SecureRandom)> -> _SINK_
+
+%<java.security.SecureRandom: void <init>()> -> _SINK_
+%<java.security.SecureRandom: void <init>(byte[])> -> _SINK_

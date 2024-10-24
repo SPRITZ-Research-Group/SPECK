@@ -8,92 +8,88 @@ from Common import *
 import sys
 
 
-'''
-RULE N°18
+"""
+RULE N°19
 
-+ Prefer explicit intents
--> https://developer.android.com/training/articles/security-tips#use-intents
++ Use Android IPC
+** Some applications use localhost network ports for handling sensitive IPC. You should not use this approach because these interfaces are accessible by other applications on the device.
+-> https://developer.android.com/training/articles/security-tips#IPNetworking
 
 ? Pseudo Code:
-	1. Get intents used in 'bindService', 'startService' or 'sendOrderedBroadcast'
-	2. Check if these intents are explicits
+	1. Look for ‘INADDR_ANY’, ‘localhost’ and ‘127.0.0.1’
 
 ! Output
-	-> NOTHING	: no implicit intent found in 'bindService', 'startService' or 'sendOrderedBroadcast'
-	-> CRITICAL	: implicit intent found in 'bindService', 'startService' or 'sendOrderedBroadcast'
-'''
+	-> NOTHING	: no network ports are used to handle sensitive IPC
+	-> WARNING	: network ports are used to handle sensitive IPC
+"""
+
 
 class Rule18(Rules):
-	def __init__(self, directory, database, verbose=True, verboseDeveloper=False, storeManager=None, flowdroid=False, platform="",validation=False, quiet=True):
-		Rules.__init__(self, directory, database, verbose, verboseDeveloper, storeManager, flowdroid, platform, validation, quiet)
+    def __init__(
+        self,
+        directory,
+        database,
+        verbose=True,
+        verboseDeveloper=False,
+        storeManager=None,
+        flowdroid=False,
+        platform="",
+        validation=False,
+        quiet=True,
+    ):
+        Rules.__init__(
+            self,
+            directory,
+            database,
+            verbose,
+            verboseDeveloper,
+            storeManager,
+            flowdroid,
+            platform,
+            validation,
+            quiet,
+        )
 
-		self.AndroidErrMsg = "implicit intent(s) might execute an android component untrusted"
-		self.AndroidOkMsg = "no implicit intent(s) might execute an android component untrusted"
-		self.AndroidText = "https://developer.android.com/training/articles/security-tips#use-intents"
+        self.AndroidErrMsg = (
+            "network port(s) (are) used to handle sensitive IPC"
+        )
+        self.AndroidOkMsg = "no network port is used to handle sensitive IPC"
+        self.AndroidText = "https://developer.android.com/training/articles/security-tips#IPNetworking"
 
-		self.errMsg = "Implicit intent might execute an android component untrusted"
-		self.category = R.CAT_1
-		
-		self.filter('android.content.Intent')
-		# self.show(18, "Prefer explicit intents")
-		self.show(18, "Prefer explicit intents")
+        self.errMsg = (
+            "Do not use localhost network ports for handling sensitive IPC"
+        )
+        self.category = R.CAT_2
 
+        self.filter(["java.net.Socket", "java.net.ServerSocket"])
+        self.show(19, "Use Android IPC")
 
-	def run(self):
-		self.loading()
-		fctList = ['bindService', 'startService', 'sendOrderedBroadcast']
-		for f in self.javaFiles:
-			fileReader = FileReader(f)
+    def run(self):
+        self.loading()
 
-			intents = Common.get_all_var_names(fileReader, ['Intent '])
-			intentsInstantiation = Common.get_all_var_names(fileReader, ['Intent', 'new'])
-			fctCallingIntent = Common.get_all_arg_names(fileReader, 'bindService', 0)
-			fctCallingIntent += Common.get_all_arg_names(fileReader, 'startService', 0)
-			fctCallingIntent += Common.get_all_arg_names(fileReader, 'startActivity', 0)
-			fctCallingIntent += Common.get_all_arg_names(fileReader, 'sendOrderedBroadcast', 0)
+        for f in self.javaFiles:
+            fileReader = FileReader(f)
 
-			# 'In' will contain all intents used by 'bindService', 'startService’, 'sendOrderedBroadcast' or 'startActivity'
-			In, _ = Common.compare(intentsInstantiation, fctCallingIntent, with1=True, scope_with1=intents)
-			
-			# Check if intents are explicit or implicit
-			NotIn = []
-			for e in In:
-				if ".class" not in e['instr']:
-					NotIn.append(e)
+            # Look for depreciated functions
+            found = Common.search_keywords(
+                fileReader,
+                ["INADDR_ANY", "localhost", "127.0.0.1"],
+                withStrings=True,
+            )
 
-			# Case where intent is instantiated in an argument position
-			NotIn2 = []
-			for e in fctCallingIntent:
-				for fct in fctList:
-					if fct in e['instr']:
-						if ("new" and "Intent") in e['instr']:
-							if not (".class" in e['instr']):
-								NotIn2.append(e)
-						break
+            # Set log msg
+            found = Parser.setMsg(found, R.WARNING, self.errMsg)
 
-			NotIn = NotIn + NotIn2
+            self.updateWN(f, found)
+            self.loading()
+            fileReader.close()
 
-			# Set log msg
-			NotIn 	= Parser.setMsg(NotIn, R.CRITICAL, self.errMsg)
-
-			# not sure why this was added
-			"""if len(NotIn) > 0:
-				test = Common.get_all_var_types(fileReader, 'activity,')
-				
-				uriSetters = Common.get_all_obj_names(fileReader, 'setData')
-				uriSetters += Common.get_all_obj_names(fileReader, 'setDataAndNormalize')
-				uriSetters += Common.get_all_obj_names(fileReader, 'setDataAndType')
-				uriSetters += Common.get_all_obj_names(fileReader, 'setDataAndTypeAndNormalize')
-
-
-				# if len(uriSetters) > 0:
-				# 	print(f'MAtch: {Common.match_obj_with_vars(NotIn, uriSetters)}')
-				NotIn += uriSetters"""
-
-			self.just_update(f, NotIn)
-			self.loading()
-			fileReader.close()
-
-		self.store(18, self.AndroidOkMsg, self.AndroidErrMsg, self.AndroidText, self.category, False, [self.errMsg])
-		self.display(FileReader)
-
+        self.store(
+            19,
+            self.AndroidOkMsg,
+            self.AndroidErrMsg,
+            self.AndroidText,
+            self.category,
+            True,
+        )
+        self.display(FileReader)

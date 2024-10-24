@@ -1,73 +1,107 @@
 #!/usr/bin/python3
 
 from Rules import *
-from XmlReader import *
+from FileReader import *
 from Parser import *
 from R import *
 import sys
 
 
-'''
-RULE N°15
+"""
+RULE N°16
 
-+ Don't use dangerous custom permissions
--> https://developer.android.com/training/articles/security-tips#CreatingPermissions
++ Delete files stored locally with a WebView
+-> https://developer.android.com/training/articles/security-tips#WebView
 
 ? Pseudo Code:
-	1. Look for custom permissions with the ‘dangerous’ protection level
+	1. Look for ‘clearCache’ methods
 
 ! Output
-	-> NOTHING	: no dangerous custom permission found
-	-> CRITICAL	: dangerous custom permission found
-'''
+	-> NOTHING	: no 'webview' method found
+	-> OK 		: webview use 'clearCache' method
+	-> WARNING	: webview doesn't use 'clearCache' method
+"""
+
 
 class Rule15(Rules):
-	def __init__(self, directory, database, verbose=True, verboseDeveloper=False, storeManager=None, flowdroid=False, platform="",validation=False, quiet=True):
-		Rules.__init__(self, directory, database, verbose, verboseDeveloper, storeManager, flowdroid, platform, validation, quiet)
+    def __init__(
+        self,
+        directory,
+        database,
+        verbose=True,
+        verboseDeveloper=False,
+        storeManager=None,
+        flowdroid=False,
+        platform="",
+        validation=False,
+        quiet=True,
+    ):
+        Rules.__init__(
+            self,
+            directory,
+            database,
+            verbose,
+            verboseDeveloper,
+            storeManager,
+            flowdroid,
+            platform,
+            validation,
+            quiet,
+        )
 
-		self.AndroidErrMsg = "custom permission(s) with the ‘dangerous’ protection level (were) found"
-		self.AndroidOkMsg = "no custom permission with the ‘dangerous’ protection level was found"
-		self.AndroidText = "https://developer.android.com/training/articles/security-tips#CreatingPermissions"
+        self.AndroidErrMsg = "webview(s) (don't) delete files stored locally"
+        self.AndroidOkMsg = "webview(s) delete() files stored locally"
+        self.AndroidText = "https://developer.android.com/training/articles/security-tips#WebView"
 
-		self.errMsg = "Don't use custom permission with the ‘dangerous’ protection level"
-		self.category = R.CAT_3
-		
-		self.findXml()
-		self.show(15, "Don't use dangerous custom permissions")
+        self.okMsg = "Webview delete files stored locally"
+        self.errMsg = (
+            "Each webview has to delete files stored locally with 'clearCache'"
+        )
+        self.category = R.CAT_2
 
-	def getDangerousCustom(self, permissions):
-		dangerous = []
+        self.filter("android.webkit.WebView")
+        self.show(16, "Delete files stored locally with a WebView")
 
-		for p in permissions:
-			for arg in p[XmlReader.ARGS]:
-				if 'android:protectionLevel="dangerous"' in arg:
-					dangerous.append(p)
-					break
+    def run(self):
+        self.loading()
 
-		return dangerous
+        for f in self.javaFiles:
+            fileReader = FileReader(f)
 
-	def run(self):
-		self.loading()
-		if self.manifest != None:
-			xmlReader = XmlReader(self.manifest)
+            found = Parser.finder(
+                fileReader,
+                [
+                    [Parser.findVarName, (["WebView "], None)],
+                    [Parser.findObjName, ("clearCache", None)],
+                ],
+            )
 
-			permissions	= xmlReader.getArgsTag("permission")
-			dangerous = self.getDangerousCustom(permissions)
-			
-			# format data to be display in 'Display' class
-			NotIn = xmlReader.constructToken(dangerous)
-			# Set log msg
-			NotIn 	= Parser.setMsg(NotIn, R.CRITICAL, self.errMsg)
+            webviews = found[0]
+            webviewsClearCache = found[1]
 
-			self.updateCN(xmlReader.getFile(), NotIn)
+            cpy = webviews.copy()
+            for w in cpy:
+                if not w[R.INSTR].startswith("WebView "):
+                    webviews.remove(w)
 
-			self.loading()
-			xmlReader.close()
+            webviews = Parser.setScopes(webviews)
 
-			self.store(15, self.AndroidOkMsg, self.AndroidErrMsg, self.AndroidText, self.category, True)
-			self.display(XmlReader)
+            # webviews have to use 'clearCache' method
+            In, NotIn = Parser.diff(webviews, webviewsClearCache)
 
-		else:
-			self.loading()
+            # Set log msg
+            In = Parser.setMsg(In, R.OK)
+            NotIn = Parser.setMsg(NotIn, R.WARNING, self.errMsg)
 
+            self.updateOWN(f, In, NotIn, (len(webviews) == 0))
+            self.loading()
+            fileReader.close()
 
+        self.store(
+            16,
+            self.AndroidOkMsg,
+            self.AndroidErrMsg,
+            self.AndroidText,
+            self.category,
+        )
+        self.display(FileReader)

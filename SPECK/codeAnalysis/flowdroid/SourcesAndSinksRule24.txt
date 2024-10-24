@@ -1,0 +1,2 @@
+<java.net.URL: java.net.URLConnection openConnection()> -> _SOURCE_
+<javax.net.ssl.HttpsURLConnection: void setHostnameVerifier(javax.net.ssl.HostnameVerifier)> -> _SINK_

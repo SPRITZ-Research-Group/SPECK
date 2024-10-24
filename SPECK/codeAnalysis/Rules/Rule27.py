@@ -6,86 +6,121 @@ from Parser import *
 from R import *
 from Common import *
 import sys
+from os import path
 
 
-'''
-RULE N°27
+"""
+RULE N°28
 
-+ Configure CAs for debugging
-** Normally, IDEs and build tools set this flag automatically for non-release builds
--> https://developer.android.com/training/articles/security-config#TrustingDebugCa
++ Opt out of cleartext traffic
+-> https://developer.android.com/training/articles/security-config#CleartextTrafficPermitted
 
 ? Pseudo Code:
-	1. Look for ‘android:networkSecurityConfig’ in manifest file
-	2. Look for <network-security-config> and <debug-overrides> in networking security configuration file 
+	1. Check if ‘cleartextTrafficPermitted’ is set to true or not set in <domain-config> tag
 
 ! Output
-	-> NOTHING	: No security config file found or no <debug-overrides> tag found
-	-> WARNING	: <debug-overrides> tag found
-'''
+	-> NOTHING	: No security config file found or no ‘cleartextTrafficPermitted’ true found
+	-> WARNING	: ‘cleartextTrafficPermitted’ true found
+"""
+
 
 class Rule27(Rules):
-	def __init__(self, directory, database, verbose=True, verboseDeveloper=False, storeManager=None, flowdroid=False, platform="",validation=False, quiet=True):
-		Rules.__init__(self, directory, database, verbose, verboseDeveloper, storeManager, flowdroid, platform, validation, quiet)
+    def __init__(
+        self,
+        directory,
+        database,
+        verbose=True,
+        verboseDeveloper=False,
+        storeManager=None,
+        flowdroid=False,
+        platform="",
+        validation=False,
+        quiet=True,
+    ):
+        Rules.__init__(
+            self,
+            directory,
+            database,
+            verbose,
+            verboseDeveloper,
+            storeManager,
+            flowdroid,
+            platform,
+            validation,
+            quiet,
+        )
 
-		self.AndroidErrMsg = "tag(s) found in networking security file"
-		self.AndroidOkMsg1 = "no debug tag found in networking security file"
-		self.AndroidOkMsg2 = "no networking security file found"
-		self.AndroidOkMsg = self.AndroidOkMsg1
-		self.AndroidText = "https://developer.android.com/training/articles/security-config#TrustingDebugCa"
+        self.AndroidErrMsg = (
+            "clear text(s) permitted in networking security file"
+        )
+        self.AndroidOkMsg1 = (
+            "no clear text permitted in networking security file"
+        )
+        self.AndroidOkMsg2 = "no networking security file found"
+        self.AndroidOkMsg = self.AndroidOkMsg1
+        self.AndroidText = "https://developer.android.com/training/articles/security-config#CleartextTrafficPermitted"
 
-		self.okMsg = "no <debug-overrides> tag found in networking security file"
-		self.errMsg = "don't forget to disable <debug-overrides> in networking security file"
-		self.category = R.CAT_2
-		
-		self.findXml()
-		self.show(27, "Configure CAs for debugging")
+        self.okMsg = "no clear text permitted in networking security file"
+        self.errMsg = "Set cleartextTrafficPermitted to False"
+        self.category = R.CAT_2
 
-	def getNetworkFile(self, app, xmlReader):
-		for tag in app:
-			args = tag[XmlReader.ARGS]
-			index, value = Common.get_arg_index_and_value(args, "android:networkSecurityConfig")
-			if index >= 0:
-				return Common.analyse_non_manifest_xml(self.manifest, value)
-		return None, None
+        self.findXml()
+        self.show(28, "Opt out of cleartext traffic")
 
-	def run(self):
-		self.loading()
+    def run(self):
+        self.loading()
 
-		if self.manifest != None:
-			xmlReader = XmlReader(self.manifest)
+        if self.manifest != None:
+            xmlReader = XmlReader(self.manifest)
 
-			app = xmlReader.getArgsTag("application")
+            application = Common.get_xml_tag_args(xmlReader, "application")
 
-			debuggable = False
-			for a in app:
-				for arg in a[XmlReader.ARGS]:
-					if 'android:debuggable="true"' in arg:
-						debuggable = True
+            for app in application:
+                args = app[XmlReader.ARGS]
+                index, value = Common.get_arg_index_and_value(
+                    args, "android:networkSecurityConfig"
+                )
+                if index >= 0:
+                    # android:networkSecurityConfig="@xml/network_security_config">
+                    # networkFile = self.manifest.replace('AndroidManifest.xml', "res/") + value.replace('@', "") + ".xml"
+                    # print(networkFile)
+                    self.maxFiles += 1
+                    networkFileReader, networkFile = (
+                        Common.analyse_non_manifest_xml(self.manifest, value)
+                    )
 
-			if debuggable:
-				securityConfigReader, networkFile = self.getNetworkFile(app, xmlReader)
+                    domain = Common.get_xml_tag_args(
+                        networkFileReader, "domain-config"
+                    )
+                    domain += Common.get_xml_tag_args(
+                        networkFileReader, "base-config"
+                    )
+                    NotIn = []
+                    for d in domain:
+                        args = d[XmlReader.ARGS]
+                        dIndex, dValue = Common.get_arg_index_and_value(
+                            args, "cleartextTrafficPermitted"
+                        )
+                        if dIndex >= 0:
+                            if dValue == "true":
+                                NotIn.append(d)
 
-				if (networkFile != None):
-					self.maxFiles += 1
-					#securityConfigReader = XmlReader(networkFile)
+                    NotIn = xmlReader.constructToken(NotIn)
 
-					debug = securityConfigReader.getArgsTag("debug-overrides")
-					NotIn = xmlReader.constructToken(debug)
+                    # Set log msg
+                    NotIn = Parser.setMsg(NotIn, R.WARNING, self.errMsg)
 
-					# Set log msg
-					NotIn = Parser.setMsg(NotIn, R.WARNING, self.errMsg)
+                    self.updateWN(networkFile, NotIn)
+                    networkFileReader.close()
 
-					self.updateWN(networkFile, NotIn)
-					securityConfigReader.close()
-				else: 
-					self.AndroidOkMsg = self.AndroidOkMsg2
-					self.updateWN(self.manifest, [])
-			else: 
-				self.updateWN(self.manifest, [])
+            xmlReader.close()
+            self.loading()
 
-			xmlReader.close()
-			self.loading()
-
-			self.store(27, self.AndroidOkMsg, self.AndroidErrMsg, self.AndroidText, self.category)
-			self.display(XmlReader)
+            self.store(
+                28,
+                self.AndroidOkMsg,
+                self.AndroidErrMsg,
+                self.AndroidText,
+                self.category,
+            )
+            self.display(XmlReader)

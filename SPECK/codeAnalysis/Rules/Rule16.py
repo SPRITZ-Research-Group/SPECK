@@ -4,71 +4,128 @@ from Rules import *
 from FileReader import *
 from Parser import *
 from R import *
+from Common import *
 import sys
 
 
-'''
-RULE N°16
+"""
+RULE N°17
 
-+ Delete files stored locally with a WebView
--> https://developer.android.com/training/articles/security-tips#WebView
++ Avoid SQL injection
+-> https://developer.android.com/training/articles/security-tips#ContentProviders
 
 ? Pseudo Code:
-	1. Look for ‘clearCache’ methods
+	1. Look for classes which extend ‘ContentProvider’
+	2. Check method names (whitelist: query, update, delete)
 
 ! Output
-	-> NOTHING	: no 'webview' method found
-	-> OK 		: webview use 'clearCache' method
-	-> WARNING	: webview doesn't use 'clearCache' method
-'''
+	-> NOTHING	: no class which extends 'ContentProvider' found
+	-> OK 		: class which extends 'ContentProvider' use only whitelisted methods
+	-> CRITICAL	: class which extends 'ContentProvider' doesn't use only whitelisted methods
+"""
+
 
 class Rule16(Rules):
-	def __init__(self, directory, database, verbose=True, verboseDeveloper=False, storeManager=None, flowdroid=False, platform="",validation=False, quiet=True):
-		Rules.__init__(self, directory, database, verbose, verboseDeveloper, storeManager, flowdroid, platform, validation, quiet)
+    def __init__(
+        self,
+        directory,
+        database,
+        verbose=True,
+        verboseDeveloper=False,
+        storeManager=None,
+        flowdroid=False,
+        platform="",
+        validation=False,
+        quiet=True,
+    ):
+        Rules.__init__(
+            self,
+            directory,
+            database,
+            verbose,
+            verboseDeveloper,
+            storeManager,
+            flowdroid,
+            platform,
+            validation,
+            quiet,
+        )
 
-		self.AndroidErrMsg = "webview(s) (don't) delete files stored locally"
-		self.AndroidOkMsg = "webview(s) delete() files stored locally"
-		self.AndroidText = "https://developer.android.com/training/articles/security-tips#WebView"
+        self.AndroidErrMsg = (
+            "content provider(s) might be subject to SQL injection"
+        )
+        self.AndroidOkMsg = (
+            "content provider(s) (are) not subject to SQL injection"
+        )
+        self.AndroidText = "https://developer.android.com/training/articles/security-tips#ContentProviders"
 
-		self.okMsg = "Webview delete files stored locally"
-		self.errMsg = "Each webview has to delete files stored locally with 'clearCache'"
-		self.category = R.CAT_2
-		
-		self.filter('android.webkit.WebView')
-		self.show(16, "Delete files stored locally with a WebView")
+        self.okMsg = "Content provider use only whitelisted methods"
+        self.errMsg = "Content provider doesn't use only whitelisted methods (query, update and delete)"
+        self.category = R.CAT_2
 
-	def run(self):
-		self.loading()
-		
-		for f in self.javaFiles:
-			fileReader = FileReader(f)
+        self.filter("android.content.ContentProvider")
+        self.show(17, "Avoid SQL injection")
 
-			found = Parser.finder(fileReader, 
-								[[Parser.findVarName, (['WebView '], None)],
-								 [Parser.findObjName, ('clearCache', None)]])
+    def check(self, listClss, listFunc):
+        In = []
+        NotIn = []
 
-			webviews = found[0]
-			webviewsClearCache = found[1]
+        blackList = ["query(", "query ("]  # CORRECT -> UNCOMMENT!
+        for clss in listClss:
+            if (
+                "extends" in clss[R.INSTR]
+                and "ContentProvider" in clss[R.INSTR]
+            ):
+                isOk = True
+                for func in listFunc:
+                    if func[R.CLASSID] == clss[R.CLASSID]:
+                        if any(elem in func[R.INSTR] for elem in blackList):
+                            NotIn.append(func)
+                            isOk = False
 
-			cpy = webviews.copy()
-			for w in cpy:
-				if not w[R.INSTR].startswith('WebView '):
-					webviews.remove(w)
+                if isOk:
+                    In.append(clss)
 
-			webviews = Parser.setScopes(webviews)
+        return In, NotIn
 
-			# webviews have to use 'clearCache' method
-			In, NotIn = Parser.diff(webviews, webviewsClearCache)
+    def run(self):
+        self.loading()
 
-			# Set log msg
-			In 		= Parser.setMsg(In, R.OK)
-			NotIn 	= Parser.setMsg(NotIn, R.WARNING, self.errMsg)
+        for f in self.javaFiles:
+            fileReader = FileReader(f)
 
-			self.updateOWN(f, In, NotIn, (len(webviews) == 0))
-			self.loading()
-			fileReader.close()
+            listClss, listFunc = Common.get_classes_and_funcs(fileReader)
+            extendsContentProvider = Common.get_extends_class(
+                listClss, "ContentProvider"
+            )
 
-		self.store(16, self.AndroidOkMsg, self.AndroidErrMsg, self.AndroidText, self.category)
-		self.display(FileReader)
+            In = []
+            NotIn = []
+            blackList = ["query(", "query ("]
+            for extends in extendsContentProvider:
+                isOk = True
+                for func in listFunc:
+                    if func[R.CLASSID] == extends[R.CLASSID]:
+                        if Common.match_any_in_list(func[R.INSTR], blackList):
+                            NotIn.append(func)
+                            isOk = False
 
+                if isOk:
+                    In.append(extends)
 
+            # Set log msg
+            In = Parser.setMsg(In, R.OK)
+            NotIn = Parser.setMsg(NotIn, R.CRITICAL, self.errMsg)
+
+            self.updateOCN(f, In, NotIn, (len(In) == 0 and len(NotIn) == 0))
+            self.loading()
+            fileReader.close()
+
+        self.store(
+            17,
+            self.AndroidOkMsg,
+            self.AndroidErrMsg,
+            self.AndroidText,
+            self.category,
+        )
+        self.display(FileReader)
