@@ -7,78 +7,93 @@ from R import *
 import sys
 
 
-'''
-RULE N°30
+"""
+RULE N°31
 
-+ Deprecated cryptographic functionality
-** Requesting a specific provider is discouraged
-** An explicit IV should always be passed when using PBE ciphers
--> https://developer.android.com/guide/topics/security/cryptography#deprecated-functionality
++ Migrate existing data
+** You should not migrate private user information, such as passwords or authorization tokens, to device encrypted storage.
+-> https://developer.android.com/training/articles/direct-boot#migrating
 
 ? Pseudo Code:
-	1. Check the 2nd argument of ‘Cipher.getInstance’
-	2. Look for ‘Cipher.getInstance("PBE…")’ and check if ‘cipher.init’ is called
+	1. Look for ‘Context.moveSharedPreferencesFrom()’ or ‘Context.moveDatabaseFrom()’ functions 
 
 ! Output
-	-> NOTHING	: No Cipher.getInstance found
-	-> OK 		: Cipher.getInstance doesn't use a provider
-	-> CRITICAL	: Cipher.getInstance had a bad argument or doesn't call 'init' method
-'''
+	-> NOTHING	: 'moveSharedPreferencesFrom' or 'moveDatabaseFrom' not found
+	-> WARNING	: 'moveSharedPreferencesFrom' or 'moveDatabaseFrom' found
+"""
+
 
 class Rule30(Rules):
-	def __init__(self, directory, database, verbose=True, verboseDeveloper=False, storeManager=None, flowdroid=False, platform="",validation=False, quiet=True):
-		Rules.__init__(self, directory, database, verbose, verboseDeveloper, storeManager, flowdroid, platform, validation, quiet)
+    def __init__(
+        self,
+        directory,
+        database,
+        verbose=True,
+        verboseDeveloper=False,
+        storeManager=None,
+        flowdroid=False,
+        platform="",
+        validation=False,
+        quiet=True,
+    ):
+        Rules.__init__(
+            self,
+            directory,
+            database,
+            verbose,
+            verboseDeveloper,
+            storeManager,
+            flowdroid,
+            platform,
+            validation,
+            quiet,
+        )
 
-		self.AndroidErrMsg = "deprecated cryptographic functionalit(ies) (are) used"
-		self.AndroidOkMsg = "no deprecated cryptographic functionality is used"
-		self.AndroidText = "https://developer.android.com/guide/topics/security/cryptography#deprecated-functionality"
+        self.AndroidErrMsg = "time(s) private data might be compromised"
+        self.AndroidOkMsg = "no private data is compromised"
+        self.AndroidText = "https://developer.android.com/training/articles/direct-boot#migrating"
 
-		self.errMsg1 = "Don't use a provider with Cipher.getInstance()"
-		self.errMsg2 = "When you use PBE, don't forget to call init() method on cipher object"
-		self.category = R.CAT_5
-		
-		self.filter('javax.crypto.Cipher')
-		self.show(30, "Deprecated cryptographic functionality")
+        self.errMsg = "You should not migrate private user information, such as passwords or authorization tokens, to device encrypted storage"
+        self.category = R.CAT_4
 
-	def run(self):
-		self.loading()
+        self.filter("android.content.Context")
+        self.show(31, "Migrate existing data")
 
-		for f in self.javaFiles:
-			fileReader = FileReader(f)
+    def run(self):
+        self.loading()
 
-			found = Parser.finder(fileReader, 
-								[[Parser.findArgName, ('Cipher.getInstance', 1, None)],
-								 [Parser.findVarName, (['Cipher '], None)],
-								 [Parser.findVarName, (['Cipher.getInstance("PBE'], None)],
-								 [Parser.findObjName, ('init', None)]])
+        for f in self.javaFiles:
+            fileReader = FileReader(f)
 
-			NotIn = found[0]
-			cipher = found[1]
-			cipherPbe = found[2]
-			cipherInit = found[3]
+            found = Parser.finder(
+                fileReader,
+                [
+                    [
+                        Parser.findLine,
+                        (
+                            [
+                                [".moveSharedPreferencesFrom"],
+                                [".moveDatabaseFrom"],
+                            ],
+                            None,
+                        ),
+                    ]
+                ],
+            )[0]
 
-			cipher = Parser.setScopes(cipher)
-			cipherPbe, other = Parser.diff(cipher, cipherPbe)
+            # Set log msg
+            found = Parser.setMsg(found, R.WARNING, self.errMsg)
 
-			In, NotIn2 = Parser.diff(cipherPbe, cipherInit)
+            self.updateWN(f, found)
+            self.loading()
+            fileReader.close()
 
-			# Set log msg
-			In = Parser.setMsg(In, R.OK)
-			NotIn = Parser.setMsg(NotIn, R.CRITICAL, self.errMsg1)
-			NotIn2 = Parser.setMsg(NotIn2, R.CRITICAL, self.errMsg2)
-
-			self.updateOCN(f, In, NotIn + NotIn2, (len(NotIn + NotIn2) == 0 and len(In) == 0))
-			self.loading()
-			fileReader.close()
-
-		self.store(30, self.AndroidOkMsg, self.AndroidErrMsg, self.AndroidText, self.category, True, [self.errMsg2])
-		self.display(FileReader)
-
-
-
-
-
-
-
-		
-
+        self.store(
+            31,
+            self.AndroidOkMsg,
+            self.AndroidErrMsg,
+            self.AndroidText,
+            self.category,
+            True,
+        )
+        self.display(FileReader)

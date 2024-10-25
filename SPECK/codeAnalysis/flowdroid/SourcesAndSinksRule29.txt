@@ -1,0 +1,10 @@
+<javax.crypto.Cipher: javax.crypto.Cipher getInstance(java.lang.String)> -> _SOURCE_
+
+<javax.crypto.Cipher: void init(int,java.security.Key,java.security.AlgorithmParameters)> -> _SINK_
+<javax.crypto.Cipher: void init(int,java.security.cert.Certificate,java.security.SecureRandom)> -> _SINK_
+<javax.crypto.Cipher: void init(int,java.security.Key,java.security.SecureRandom)> -> _SINK_
+<javax.crypto.Cipher: void init(int,java.security.Key,java.security.spec.AlgorithmParameterSpec)> -> _SINK_
+<javax.crypto.Cipher: void init(int,java.security.Key)> -> _SINK_
+<javax.crypto.Cipher: void init(int,java.security.Key,java.security.spec.AlgorithmParameterSpec,java.security.SecureRandom)> -> _SINK_
+<javax.crypto.Cipher: void init(int,java.security.cert.Certificate)> -> _SINK_
+<javax.crypto.Cipher: void init(int,java.security.Key,java.security.AlgorithmParameters,java.security.SecureRandom)> -> _SINK_

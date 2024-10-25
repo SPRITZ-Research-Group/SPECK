@@ -1,20 +1,24 @@
 #!/usr/bin/python3
 
-import sys
-
-from FileReader import *
+from Rules import *
+from XmlReader import *
 from Parser import *
 from R import *
-from XmlReader import *
+import sys
 
-from Rules import *
 
 """
-RULE N°14
+RULE N°15
 
-+ Check validity of data
-** make sure that the contents of the data haven't been corrupted or modified
--> https://developer.android.com/topic/security/best-practices#external-storage
++ Don't use dangerous custom permissions
+-> https://developer.android.com/training/articles/security-tips#CreatingPermissions
+
+? Pseudo Code:
+	1. Look for custom permissions with the ‘dangerous’ protection level
+
+! Output
+	-> NOTHING	: no dangerous custom permission found
+	-> CRITICAL	: dangerous custom permission found
 """
 
 
@@ -44,114 +48,56 @@ class Rule14(Rules):
             quiet,
         )
 
-        self.AndroidErrMsg = "reading on external storage might not be checked"
-        self.AndroidOkMsg = "reading on external storage (are) checked"
-        self.AndroidText = "https://developer.android.com/topic/security/best-practices#external-storage"
+        self.AndroidErrMsg = "custom permission(s) with the ‘dangerous’ protection level (were) found"
+        self.AndroidOkMsg = "no custom permission with the ‘dangerous’ protection level was found"
+        self.AndroidText = "https://developer.android.com/training/articles/security-tips#CreatingPermissions"
 
-        self.okMsg = "Data is checked when reading on external storage"
-        self.errMsg = "Don't forget to double check the integrity of the data acquired from the external storage"
-        self.category = R.CAT_4
+        self.errMsg = (
+            "Don't use custom permission with the ‘dangerous’ protection level"
+        )
+        self.category = R.CAT_3
 
         self.findXml()
-        self.show(14, "Check validity of data")
+        self.show(15, "Don't use dangerous custom permissions")
 
-    def checkReadOnExternalStorage(self, xmlReader, permissions):
+    def getDangerousCustom(self, permissions):
+        dangerous = []
+
         for p in permissions:
             for arg in p[XmlReader.ARGS]:
-                if "android:name=" in arg:
-                    value = xmlReader.getArgValue(arg)
-                    if "READ_EXTERNAL_STORAGE" in value or "WRITE_EXTERNAL_STORAGE" in value:
-                        return True
-        return False
+                if 'android:protectionLevel="dangerous"' in arg:
+                    dangerous.append(p)
+                    break
 
-    def checkInScope(self, inStream, validator):
-        In = []
-        NotIn = []
-
-        inStream = Parser.setScopes(inStream)
-        for elem in inStream:
-            isIn = False
-
-            for v in validator:
-                if (elem[R.SCOPE] == R.VARGLOBAL) or (elem[R.SCOPE] == R.VARCLASS and elem[R.CLASSID] == v[R.CLASSID]) or (
-                        elem[R.SCOPE] == R.VARLOCAL
-                        and elem[R.CLASSID] == v[R.CLASSID]
-                        and elem[R.FUNCID] == v[R.FUNCID]
-                    ):
-
-                    isIn = True
-            if isIn == False:
-                NotIn.append(elem)
-            else:
-                In.append(elem)
-
-        return In, NotIn
+        return dangerous
 
     def run(self):
         self.loading()
-
         if self.manifest != None:
             xmlReader = XmlReader(self.manifest)
 
-            # Check if READ_EXTERNAL_STORAGE is in manifest file
-            permissions = xmlReader.getArgsTag("uses-permission")
-            readOnExternalStorage = self.checkReadOnExternalStorage(
-                xmlReader, permissions
-            )
+            permissions = xmlReader.getArgsTag("permission")
+            dangerous = self.getDangerousCustom(permissions)
 
-            if readOnExternalStorage:
-                filt = Filter(self.directory, ["android.content.Context", "android.os.Environment"])
-                javaFiles = filt.execute()
+            # format data to be display in 'Display' class
+            NotIn = xmlReader.constructToken(dangerous)
+            # Set log msg
+            NotIn = Parser.setMsg(NotIn, R.CRITICAL, self.errMsg)
 
-                if len(javaFiles) > 0:
-                    self.maxFiles = len(javaFiles)
-                else:
-                    self.loading()
-                    self.updateN()
+            self.updateCN(xmlReader.getFile(), NotIn)
 
-                for f in javaFiles:
-                    fileReader = FileReader(f)
-
-                    found = Parser.finder(
-                        fileReader,
-                        [
-                            [Parser.findLine, ([["getExternalFilesDir("]], None)],
-                            [Parser.findLine,([["getExternalStorageDirectory("]], None)],
-                            [Parser.findLine,([["getExternalStoragePublicDirectory("]], None)],
-                            [Parser.findLine, ([["getExternalCacheDir("]], None)],
-                            [Parser.findLine, ([["getExternalCacheDirs("]], None)],
-                            [Parser.findLine, ([["getExternalFilesDir("]], None)],
-                            [Parser.findLine, ([["getExternalFilesDirs("]], None)],
-                            [Parser.findLine, ([["getExternalMediaDirs("]], None)],
-							# validator
-                            [Parser.findLine, ([["new FileInputStream("]], None)],
-                            [Parser.findLine, ([["openFileInput("]], None)],
-                        ],
-                    )
-
-                    # Get all the lines where the external storage is required, then check for FileInputStream variables in that scope
-                    inStream = found[0] + found[1] + found[2] + found[3] + found[4] + found[5] + found[6] + found[7]
-                    validator = found[8] + found[9]
-
-                    # Check if each FileInputStream have a function which check validity of data in its scope
-                    # sime: changed the order, since we check if the file is used as input and not if a validation function is called
-                    NotIn, In = self.checkInScope(inStream, validator)
-
-                    # Set log msg
-                    In = Parser.setMsg(In, R.OK)
-                    NotIn = Parser.setMsg(NotIn, R.WARNING, self.errMsg)
-
-                    self.updateOWN(f, In, NotIn, (len(NotIn) == 0 and len(In) == 0))
-                    self.loading()
-                    fileReader.close()
-
-            else:
-                self.loading()
-                self.updateN()
-
+            self.loading()
             xmlReader.close()
 
-        self.store(
-            14, self.AndroidOkMsg, self.AndroidErrMsg, self.AndroidText, self.category
-        )
-        self.display(FileReader)
+            self.store(
+                15,
+                self.AndroidOkMsg,
+                self.AndroidErrMsg,
+                self.AndroidText,
+                self.category,
+                True,
+            )
+            self.display(XmlReader)
+
+        else:
+            self.loading()

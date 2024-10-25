@@ -8,86 +8,140 @@ from Common import *
 import sys
 
 
-'''
-RULE N°17
+"""
+RULE N°18
 
-+ Avoid SQL injection
--> https://developer.android.com/training/articles/security-tips#ContentProviders
++ Prefer explicit intents
+-> https://developer.android.com/training/articles/security-tips#use-intents
 
 ? Pseudo Code:
-	1. Look for classes which extend ‘ContentProvider’
-	2. Check method names (whitelist: query, update, delete)
+	1. Get intents used in 'bindService', 'startService' or 'sendOrderedBroadcast'
+	2. Check if these intents are explicits
 
 ! Output
-	-> NOTHING	: no class which extends 'ContentProvider' found
-	-> OK 		: class which extends 'ContentProvider' use only whitelisted methods
-	-> CRITICAL	: class which extends 'ContentProvider' doesn't use only whitelisted methods
-'''
+	-> NOTHING	: no implicit intent found in 'bindService', 'startService' or 'sendOrderedBroadcast'
+	-> CRITICAL	: implicit intent found in 'bindService', 'startService' or 'sendOrderedBroadcast'
+"""
+
 
 class Rule17(Rules):
-	def __init__(self, directory, database, verbose=True, verboseDeveloper=False, storeManager=None, flowdroid=False, platform="",validation=False, quiet=True):
-		Rules.__init__(self, directory, database, verbose, verboseDeveloper, storeManager, flowdroid, platform, validation, quiet)
+    def __init__(
+        self,
+        directory,
+        database,
+        verbose=True,
+        verboseDeveloper=False,
+        storeManager=None,
+        flowdroid=False,
+        platform="",
+        validation=False,
+        quiet=True,
+    ):
+        Rules.__init__(
+            self,
+            directory,
+            database,
+            verbose,
+            verboseDeveloper,
+            storeManager,
+            flowdroid,
+            platform,
+            validation,
+            quiet,
+        )
 
-		self.AndroidErrMsg = "content provider(s) might be subject to SQL injection"
-		self.AndroidOkMsg = "content provider(s) (are) not subject to SQL injection"
-		self.AndroidText = "https://developer.android.com/training/articles/security-tips#ContentProviders"
+        self.AndroidErrMsg = (
+            "implicit intent(s) might execute an android component untrusted"
+        )
+        self.AndroidOkMsg = "no implicit intent(s) might execute an android component untrusted"
+        self.AndroidText = "https://developer.android.com/training/articles/security-tips#use-intents"
 
-		self.okMsg = "Content provider use only whitelisted methods"
-		self.errMsg = "Content provider doesn't use only whitelisted methods (query, update and delete)"
-		self.category = R.CAT_2
-		
-		self.filter('android.content.ContentProvider')
-		self.show(17, "Avoid SQL injection")
+        self.errMsg = (
+            "Implicit intent might execute an android component untrusted"
+        )
+        self.category = R.CAT_1
 
-	def check(self, listClss, listFunc):
-		In = []
-		NotIn = []
+        self.filter("android.content.Intent")
+        # self.show(18, "Prefer explicit intents")
+        self.show(18, "Prefer explicit intents")
 
-		blackList = ["query(", "query ("]								# CORRECT -> UNCOMMENT!
-		for clss in listClss:
-			if "extends" in clss[R.INSTR] and "ContentProvider" in clss[R.INSTR]:
-				isOk = True
-				for func in listFunc:
-					if func[R.CLASSID] == clss[R.CLASSID]:
-						if any(elem in func[R.INSTR] for elem in blackList):
-							NotIn.append(func)
-							isOk = False
+    def run(self):
+        self.loading()
+        fctList = ["bindService", "startService", "sendOrderedBroadcast"]
+        for f in self.javaFiles:
+            fileReader = FileReader(f)
 
-				if isOk:
-					In.append(clss)
+            intents = Common.get_all_var_names(fileReader, ["Intent "])
+            intentsInstantiation = Common.get_all_var_names(
+                fileReader, ["Intent", "new"]
+            )
+            fctCallingIntent = Common.get_all_arg_names(
+                fileReader, "bindService", 0
+            )
+            fctCallingIntent += Common.get_all_arg_names(
+                fileReader, "startService", 0
+            )
+            fctCallingIntent += Common.get_all_arg_names(
+                fileReader, "startActivity", 0
+            )
+            fctCallingIntent += Common.get_all_arg_names(
+                fileReader, "sendOrderedBroadcast", 0
+            )
 
-		return In, NotIn
+            # 'In' will contain all intents used by 'bindService', 'startService’, 'sendOrderedBroadcast' or 'startActivity'
+            In, _ = Common.compare(
+                intentsInstantiation,
+                fctCallingIntent,
+                with1=True,
+                scope_with1=intents,
+            )
 
-	def run(self):
-		self.loading()
+            # Check if intents are explicit or implicit
+            NotIn = []
+            for e in In:
+                if ".class" not in e["instr"]:
+                    NotIn.append(e)
 
-		for f in self.javaFiles:
-			fileReader = FileReader(f)
+            # Case where intent is instantiated in an argument position
+            NotIn2 = []
+            for e in fctCallingIntent:
+                for fct in fctList:
+                    if fct in e["instr"]:
+                        if ("new" and "Intent") in e["instr"]:
+                            if not (".class" in e["instr"]):
+                                NotIn2.append(e)
+                        break
 
-			listClss, listFunc = Common.get_classes_and_funcs(fileReader)
-			extendsContentProvider = Common.get_extends_class(listClss, 'ContentProvider')
+            NotIn = NotIn + NotIn2
 
-			In = []
-			NotIn = []
-			blackList = ['query(', 'query (']
-			for extends in extendsContentProvider:
-				isOk = True
-				for func in listFunc:
-					if func[R.CLASSID] == extends[R.CLASSID]:
-						if Common.match_any_in_list(func[R.INSTR], blackList):
-							NotIn.append(func)
-							isOk = False
+            # Set log msg
+            NotIn = Parser.setMsg(NotIn, R.CRITICAL, self.errMsg)
 
-				if isOk:
-					In.append(extends)
+            # not sure why this was added
+            """if len(NotIn) > 0:
+				test = Common.get_all_var_types(fileReader, 'activity,')
+				
+				uriSetters = Common.get_all_obj_names(fileReader, 'setData')
+				uriSetters += Common.get_all_obj_names(fileReader, 'setDataAndNormalize')
+				uriSetters += Common.get_all_obj_names(fileReader, 'setDataAndType')
+				uriSetters += Common.get_all_obj_names(fileReader, 'setDataAndTypeAndNormalize')
 
-			# Set log msg
-			In 		= Parser.setMsg(In, R.OK)
-			NotIn 	= Parser.setMsg(NotIn, R.CRITICAL, self.errMsg)
 
-			self.updateOCN(f, In, NotIn, (len(In) == 0 and len(NotIn) == 0))
-			self.loading()
-			fileReader.close()
+				# if len(uriSetters) > 0:
+				# 	print(f'MAtch: {Common.match_obj_with_vars(NotIn, uriSetters)}')
+				NotIn += uriSetters"""
 
-		self.store(17, self.AndroidOkMsg, self.AndroidErrMsg, self.AndroidText, self.category)
-		self.display(FileReader)
+            self.just_update(f, NotIn)
+            self.loading()
+            fileReader.close()
+
+        self.store(
+            18,
+            self.AndroidOkMsg,
+            self.AndroidErrMsg,
+            self.AndroidText,
+            self.category,
+            False,
+            [self.errMsg],
+        )
+        self.display(FileReader)

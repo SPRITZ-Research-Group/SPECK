@@ -15,18 +15,19 @@ import time
 from FlowDroidRule1 import *
 from FlowDroidRule7 import *
 from FlowDroidRule9 import *
-from FlowDroidRule16 import *
-from FlowDroidRule18 import *
-from FlowDroidRule22 import *
+from FlowDroidRule15 import *
+from FlowDroidRule17 import *
+from FlowDroidRule21 import *
+from FlowDroidRule24 import *
 from FlowDroidRule25 import *
-from FlowDroidRule26 import *
-from FlowDroidRule30 import *
+from FlowDroidRule29 import *
 
 import Rules
 
 from FileReader import *
 from Parser import *
 from R import *
+
 
 class FlowDroid:
     ID = "id"
@@ -38,7 +39,11 @@ class FlowDroid:
     METHOD = "method"
     FLOW = "flow"
 
-    def __init__(self, rule, apk, platform, verbose, verboseDeveloper, errMsg, cb=True):
+    TIMEOUT = 4900
+
+    def __init__(
+        self, rule, apk, platform, verbose, verboseDeveloper, errMsg, cb=True
+    ):
         self.rule = rule
         self.apk = apk
         self.cb = cb
@@ -59,33 +64,36 @@ class FlowDroid:
             None,
             FlowDroidRule7,
             None,
-            None, #FlowDroidRule9,
+            None,  # FlowDroidRule9,
             None,
             None,
             None,
             None,
             None,
+            FlowDroidRule15,
             None,
-            FlowDroidRule16,
-            None,
-            FlowDroidRule18,
-            None,
+            FlowDroidRule17,
             None,
             None,
-            FlowDroidRule22,
+            None,
+            FlowDroidRule21,
             None,
             None,
+            FlowDroidRule24,
             FlowDroidRule25,
-            FlowDroidRule26,
             None,
             None,
             None,
-            None, #FlowDroidRule30,
             None,
+            None,  # FlowDroidRule30,
             None,
         ]
 
-        if os.path.isfile(self.srcNsink) and os.path.isfile(apk) and self.fct[self.rule - 1] != None:
+        if (
+            os.path.isfile(self.srcNsink)
+            and os.path.isfile(apk)
+            and self.fct[self.rule - 1] != None
+        ):
             # if os.path.isfile(self.srcNsink):
             if self.verbose:
                 print("\033[36m[?] FlowDroid is running...\033[0m")
@@ -112,16 +120,16 @@ class FlowDroid:
             "--noexceptions",
             "--nostatic",
             "--timeout",
-            "200",
+            str(FlowDroid.TIMEOUT),
             "-cf",
             self.apk + ".cg",
             "--resulttimeout",
-            "200",
+            str(FlowDroid.TIMEOUT),
         ]
-        #if self.cb:
+        # if self.cb:
         #    args.append("--callbacktimeout")
         #    args.append("200")
-        #else:
+        # else:
         #    args.append("--nocallbacks")
         if self.rule == 1 and self.cb:
             args.append("-ct")
@@ -131,7 +139,7 @@ class FlowDroid:
             args.append("1")
         else:
             args.append("-nc")
-        #print(args)
+        # print(args)
         out = subprocess.Popen(
             args,
             stdout=subprocess.PIPE,
@@ -144,7 +152,7 @@ class FlowDroid:
         while True:
             data = out.stdout.readline().decode().strip()
             stdout.append(data)
-            #print(data)
+            # print(data)
 
             if "leaks" in data and "Found" in data:
                 subprocess.call(
@@ -152,9 +160,15 @@ class FlowDroid:
                     shell=True,
                 )
                 break
-            if "The data flow analysis has failed." in data or "GC overhead limit exceeded" in data or "java.lang.OutOfMemory: Java heap space" in data:
+            if (
+                "The data flow analysis has failed." in data
+                or "GC overhead limit exceeded" in data
+                or "java.lang.OutOfMemory: Java heap space" in data
+            ):
                 with open("flowdroid_errors.txt", "a+") as f:
-                    f.write(f"error {os.path.basename(self.apk)} - {os.path.basename(self.srcNsink)} [cb: {self.cb}]\n") 
+                    f.write(
+                        f"error {os.path.basename(self.apk)} - {os.path.basename(self.srcNsink)} [cb: {self.cb}]\n"
+                    )
                 flowdroid_err = True
             if not data:
                 print("No more data!")
@@ -178,15 +192,21 @@ class FlowDroid:
                 elem[FlowDroid.METHOD] = (
                     line.split("The sink ")[1]
                     .split(" in method ")[1]
-                    .split(" was called with values from the following sources:")[0]
+                    .split(
+                        " was called with values from the following sources:"
+                    )[0]
                 )
                 self.sinks.append(elem)
                 Id += 1
             elif "- - " in line:
                 elem[FlowDroid.FLOW] = self.sinks[-1][FlowDroid.ID]
                 elem[FlowDroid.TYPE] = FlowDroid.SOURCE
-                elem[FlowDroid.INVOKE] = line.split("- - ")[1].split(" in method ")[0]
-                elem[FlowDroid.METHOD] = line.split("- - ")[1].split(" in method ")[1]
+                elem[FlowDroid.INVOKE] = line.split("- - ")[1].split(
+                    " in method "
+                )[0]
+                elem[FlowDroid.METHOD] = line.split("- - ")[1].split(
+                    " in method "
+                )[1]
                 self.sources.append(elem)
 
         if self.verbose:
@@ -278,7 +298,8 @@ class FlowDroid:
     @staticmethod
     def getPath(paths, b):
         filename = (
-            b[FlowDroid.METHOD].split(":")[0].replace("<", "").split(".")[-1] + ".java"
+            b[FlowDroid.METHOD].split(":")[0].replace("<", "").split(".")[-1]
+            + ".java"
         )
         for f in paths:
             if f.endswith(filename):
@@ -321,13 +342,16 @@ class FlowDroid:
     def appendBadToken(rule, errMsg, tok, results, statFiles, path, severity):
         wasFound = False
         for file in results:
-            
+
             if file[0] == path:
                 # check if error was not already found
                 found = False
                 if severity in file[1]:
                     for elem in file[1][severity]:
-                        if elem[R.PATH] == tok[R.PATH] and elem[R.INSTR] == tok[R.INSTR]:
+                        if (
+                            elem[R.PATH] == tok[R.PATH]
+                            and elem[R.INSTR] == tok[R.INSTR]
+                        ):
                             found = True
                             wasFound = True
                             break
@@ -380,7 +404,12 @@ class FlowDroid:
                     # check if method location match
                     if bad_location == elem:
                         results, statFiles = FlowDroid.Bad2Good(
-                            results, statFiles, index, err, severity, verboseDeveloper
+                            results,
+                            statFiles,
+                            index,
+                            err,
+                            severity,
+                            verboseDeveloper,
                         )
                         if len(results[index][1][severity]) == 0:
                             statFiles[severity] -= 1
@@ -423,7 +452,12 @@ class FlowDroid:
                     # check if method location match
                     if good_location == elem:
                         results, statFiles = FlowDroid.Good2Bad(
-                            results, statFiles, index, err, severity, verboseDeveloper
+                            results,
+                            statFiles,
+                            index,
+                            err,
+                            severity,
+                            verboseDeveloper,
                         )
                         if len(results[index][1][R.OK]) == 0:
                             statFiles[R.OK] -= 1

@@ -7,101 +7,111 @@ from R import *
 import sys
 
 
-'''
-RULE N°29
+"""
+RULE N°30
 
-+ Choose a recommended algorithm
--> https://developer.android.com/guide/topics/security/cryptography#choose-algorithm
++ Deprecated cryptographic functionality
+** Requesting a specific provider is discouraged
+** An explicit IV should always be passed when using PBE ciphers
+-> https://developer.android.com/guide/topics/security/cryptography#deprecated-functionality
 
 ? Pseudo Code:
-	1. Check ‘getInstance’ argument for each cryptographic class and compare with recommendation 
+	1. Check the 2nd argument of ‘Cipher.getInstance’
+	2. Look for ‘Cipher.getInstance("PBE…")’ and check if ‘cipher.init’ is called
 
 ! Output
-	-> NOTHING	: no cryptographic class found
-	-> WARNING	: a cryptographic class doesn't use an algorithm recommended
-	-> OK  		: a cryptographic class use an algorithm recommended
-'''
+	-> NOTHING	: No Cipher.getInstance found
+	-> OK 		: Cipher.getInstance doesn't use a provider
+	-> CRITICAL	: Cipher.getInstance had a bad argument or doesn't call 'init' method
+"""
+
 
 class Rule29(Rules):
-	def __init__(self, directory, database, verbose=True, verboseDeveloper=False, storeManager=None, flowdroid=False, platform="",validation=False, quiet=True):
-		Rules.__init__(self, directory, database, verbose, verboseDeveloper, storeManager, flowdroid, platform, validation, quiet)
+    def __init__(
+        self,
+        directory,
+        database,
+        verbose=True,
+        verboseDeveloper=False,
+        storeManager=None,
+        flowdroid=False,
+        platform="",
+        validation=False,
+        quiet=True,
+    ):
+        Rules.__init__(
+            self,
+            directory,
+            database,
+            verbose,
+            verboseDeveloper,
+            storeManager,
+            flowdroid,
+            platform,
+            validation,
+            quiet,
+        )
 
-		self.AndroidErrMsg = "cryptographic algorithm(s) not recommended (are) used"
-		self.AndroidOkMsg = "cryptographic algorithm(s) recommended (are) used"
-		self.AndroidText = "https://developer.android.com/guide/topics/security/cryptography#choose-algorithm"
+        self.AndroidErrMsg = (
+            "deprecated cryptographic functionalit(ies) (are) used"
+        )
+        self.AndroidOkMsg = "no deprecated cryptographic functionality is used"
+        self.AndroidText = "https://developer.android.com/guide/topics/security/cryptography#deprecated-functionality"
 
-		self.okMsg = "A recommended cryptographic algorithm is used"
-		self.errMsg = "It's better to use a recommended cryptographic algorithm"
-		self.category = R.CAT_5
-		
-		self.filters(['javax.crypto.Cipher', 'java.security.MessageDigest', 'javax.crypto.Mac', 'java.security.Signature'])
-		self.show(29, "Choose a recommended algorithm")
+        self.errMsg1 = "Don't use a provider with Cipher.getInstance()"
+        self.errMsg2 = "When you use PBE, don't forget to call init() method on cipher object"
+        self.category = R.CAT_5
 
-	def checkCryptoArg(self, args, conds):
-		In = []
-		NotIn = []
+        self.filter("javax.crypto.Cipher")
+        self.show(30, "Deprecated cryptographic functionality")
 
-		for arg in args:
-			checked = False
-			for c in conds:
-				if all(e in arg[R.VALUE] for e in c):
-					In.append(arg)
-					checked = True
-					break
+    def run(self):
+        self.loading()
 
-			if not checked:
-				NotIn.append(arg)
+        for f in self.javaFiles:
+            fileReader = FileReader(f)
 
-		return In, NotIn
+            found = Parser.finder(
+                fileReader,
+                [
+                    [Parser.findArgName, ("Cipher.getInstance", 1, None)],
+                    [Parser.findVarName, (["Cipher "], None)],
+                    [Parser.findVarName, (['Cipher.getInstance("PBE'], None)],
+                    [Parser.findObjName, ("init", None)],
+                ],
+            )
 
-	def run(self):
-		self.loading()
+            NotIn = found[0]
+            cipher = found[1]
+            cipherPbe = found[2]
+            cipherInit = found[3]
 
-		for f in self.javaFiles:
-			fileReader = FileReader(f)
+            cipher = Parser.setScopes(cipher)
+            cipherPbe, other = Parser.diff(cipher, cipherPbe)
 
-			found = Parser.finder(fileReader, 
-								[[Parser.findArgName, ('Cipher.getInstance', 0, None)],
-								 [Parser.findArgName, ('MessageDigest.getInstance', 0, None)],
-								 [Parser.findArgName, ('Mac.getInstance', 0, None)],
-								 [Parser.findArgName, ('Signature.getInstance', 0, None)]
-								 ])
+            In, NotIn2 = Parser.diff(cipherPbe, cipherInit)
 
-			cipher = found[0]
-			message = found[1]
-			mac = found[2]
-			sign = found[3]
+            # Set log msg
+            In = Parser.setMsg(In, R.OK)
+            NotIn = Parser.setMsg(NotIn, R.CRITICAL, self.errMsg1)
+            NotIn2 = Parser.setMsg(NotIn2, R.CRITICAL, self.errMsg2)
 
-			In, NotIn = self.checkCryptoArg(cipher, [['AES', 'CBC'], ['AES', 'GCM']])
+            self.updateOCN(
+                f,
+                In,
+                NotIn + NotIn2,
+                (len(NotIn + NotIn2) == 0 and len(In) == 0),
+            )
+            self.loading()
+            fileReader.close()
 
-			tmp1, tmp2 = self.checkCryptoArg(message, [['SHA-2'], ['SHA2']])
-			In += tmp1
-			NotIn += tmp2
-
-			tmp1, tmp2 = self.checkCryptoArg(mac, [['SHA-2', 'HMAC'], ['SHA2', 'HMAC']])
-			In += tmp1
-			NotIn += tmp2
-
-			tmp1, tmp2 = self.checkCryptoArg(sign, [['SHA-2', 'ECDSA'], ['SHA2', 'ECDSA']])
-			In += tmp1
-			NotIn += tmp2
-
-			# Set log msg
-			In = Parser.setMsg(In, R.OK)
-			NotIn = Parser.setMsg(NotIn, R.WARNING, self.errMsg)
-
-			self.updateOWN(f, In, NotIn, (len(NotIn) == 0 and len(In) == 0))
-			self.loading()
-			fileReader.close()
-
-		self.store(29, self.AndroidOkMsg, self.AndroidErrMsg, self.AndroidText, self.category, True)
-		self.display(FileReader)
-
-
-
-
-
-
-
-		
-
+        self.store(
+            30,
+            self.AndroidOkMsg,
+            self.AndroidErrMsg,
+            self.AndroidText,
+            self.category,
+            True,
+            [self.errMsg2],
+        )
+        self.display(FileReader)

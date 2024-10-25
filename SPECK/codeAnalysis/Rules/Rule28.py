@@ -1,88 +1,151 @@
 #!/usr/bin/python3
 
 from Rules import *
-from XmlReader import *
+from FileReader import *
 from Parser import *
 from R import *
-from Common import *
 import sys
-from os import path
 
 
-'''
-RULE N°28
+"""
+RULE N°29
 
-+ Opt out of cleartext traffic
--> https://developer.android.com/training/articles/security-config#CleartextTrafficPermitted
++ Choose a recommended algorithm
+-> https://developer.android.com/guide/topics/security/cryptography#choose-algorithm
 
 ? Pseudo Code:
-	1. Check if ‘cleartextTrafficPermitted’ is set to true or not set in <domain-config> tag
+	1. Check ‘getInstance’ argument for each cryptographic class and compare with recommendation 
 
 ! Output
-	-> NOTHING	: No security config file found or no ‘cleartextTrafficPermitted’ true found
-	-> WARNING	: ‘cleartextTrafficPermitted’ true found
-'''
+	-> NOTHING	: no cryptographic class found
+	-> WARNING	: a cryptographic class doesn't use an algorithm recommended
+	-> OK  		: a cryptographic class use an algorithm recommended
+"""
+
 
 class Rule28(Rules):
-	def __init__(self, directory, database, verbose=True, verboseDeveloper=False, storeManager=None, flowdroid=False, platform="",validation=False, quiet=True):
-		Rules.__init__(self, directory, database, verbose, verboseDeveloper, storeManager, flowdroid, platform, validation, quiet)
+    def __init__(
+        self,
+        directory,
+        database,
+        verbose=True,
+        verboseDeveloper=False,
+        storeManager=None,
+        flowdroid=False,
+        platform="",
+        validation=False,
+        quiet=True,
+    ):
+        Rules.__init__(
+            self,
+            directory,
+            database,
+            verbose,
+            verboseDeveloper,
+            storeManager,
+            flowdroid,
+            platform,
+            validation,
+            quiet,
+        )
 
-		self.AndroidErrMsg = "clear text(s) permitted in networking security file"
-		self.AndroidOkMsg1 = "no clear text permitted in networking security file"
-		self.AndroidOkMsg2 = "no networking security file found"
-		self.AndroidOkMsg = self.AndroidOkMsg1
-		self.AndroidText = "https://developer.android.com/training/articles/security-config#CleartextTrafficPermitted"
+        self.AndroidErrMsg = (
+            "cryptographic algorithm(s) not recommended (are) used"
+        )
+        self.AndroidOkMsg = "cryptographic algorithm(s) recommended (are) used"
+        self.AndroidText = "https://developer.android.com/guide/topics/security/cryptography#choose-algorithm"
 
-		self.okMsg = "no clear text permitted in networking security file"
-		self.errMsg = "Set cleartextTrafficPermitted to False"
-		self.category = R.CAT_2
-		
-		self.findXml()
-		self.show(28, "Opt out of cleartext traffic")
+        self.okMsg = "A recommended cryptographic algorithm is used"
+        self.errMsg = (
+            "It's better to use a recommended cryptographic algorithm"
+        )
+        self.category = R.CAT_5
 
-	def run(self):
-		self.loading()
+        self.filters(
+            [
+                "javax.crypto.Cipher",
+                "java.security.MessageDigest",
+                "javax.crypto.Mac",
+                "java.security.Signature",
+            ]
+        )
+        self.show(29, "Choose a recommended algorithm")
 
-		if self.manifest != None:
-			xmlReader = XmlReader(self.manifest)
+    def checkCryptoArg(self, args, conds):
+        In = []
+        NotIn = []
 
-			application = Common.get_xml_tag_args(xmlReader, 'application')
+        for arg in args:
+            checked = False
+            for c in conds:
+                if all(e in arg[R.VALUE] for e in c):
+                    In.append(arg)
+                    checked = True
+                    break
 
-			for app in application:
-				args = app[XmlReader.ARGS]
-				index, value = Common.get_arg_index_and_value(args, "android:networkSecurityConfig")
-				if index >= 0:
-					# android:networkSecurityConfig="@xml/network_security_config">
-					#networkFile = self.manifest.replace('AndroidManifest.xml', "res/") + value.replace('@', "") + ".xml"
-					#print(networkFile)
-					self.maxFiles += 1
-					networkFileReader, networkFile = Common.analyse_non_manifest_xml(self.manifest, value)
+            if not checked:
+                NotIn.append(arg)
 
-					domain = Common.get_xml_tag_args(networkFileReader, 'domain-config')
-					domain += Common.get_xml_tag_args(networkFileReader, 'base-config')
-					NotIn = []
-					for d in domain: 
-						args = d[XmlReader.ARGS]
-						dIndex, dValue = Common.get_arg_index_and_value(args, 'cleartextTrafficPermitted')
-						if dIndex >= 0:
-							if dValue == "true":
-								NotIn.append(d)
+        return In, NotIn
 
-					NotIn = xmlReader.constructToken(NotIn)
+    def run(self):
+        self.loading()
 
-					# Set log msg
-					NotIn 	= Parser.setMsg(NotIn, R.WARNING, self.errMsg)
+        for f in self.javaFiles:
+            fileReader = FileReader(f)
 
-					self.updateWN(networkFile, NotIn)
-					networkFileReader.close()
-				
-			xmlReader.close()
-			self.loading()
+            found = Parser.finder(
+                fileReader,
+                [
+                    [Parser.findArgName, ("Cipher.getInstance", 0, None)],
+                    [
+                        Parser.findArgName,
+                        ("MessageDigest.getInstance", 0, None),
+                    ],
+                    [Parser.findArgName, ("Mac.getInstance", 0, None)],
+                    [Parser.findArgName, ("Signature.getInstance", 0, None)],
+                ],
+            )
 
-			self.store(28, self.AndroidOkMsg, self.AndroidErrMsg, self.AndroidText, self.category)
-			self.display(XmlReader)
+            cipher = found[0]
+            message = found[1]
+            mac = found[2]
+            sign = found[3]
 
+            In, NotIn = self.checkCryptoArg(
+                cipher, [["AES", "CBC"], ["AES", "GCM"]]
+            )
 
+            tmp1, tmp2 = self.checkCryptoArg(message, [["SHA-2"], ["SHA2"]])
+            In += tmp1
+            NotIn += tmp2
 
+            tmp1, tmp2 = self.checkCryptoArg(
+                mac, [["SHA-2", "HMAC"], ["SHA2", "HMAC"]]
+            )
+            In += tmp1
+            NotIn += tmp2
 
+            tmp1, tmp2 = self.checkCryptoArg(
+                sign, [["SHA-2", "ECDSA"], ["SHA2", "ECDSA"]]
+            )
+            In += tmp1
+            NotIn += tmp2
 
+            # Set log msg
+            In = Parser.setMsg(In, R.OK)
+            NotIn = Parser.setMsg(NotIn, R.WARNING, self.errMsg)
+
+            self.updateOWN(f, In, NotIn, (len(NotIn) == 0 and len(In) == 0))
+            self.loading()
+            fileReader.close()
+
+        self.store(
+            29,
+            self.AndroidOkMsg,
+            self.AndroidErrMsg,
+            self.AndroidText,
+            self.category,
+            True,
+        )
+        self.display(FileReader)
